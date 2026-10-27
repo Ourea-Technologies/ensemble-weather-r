@@ -1,0 +1,22 @@
+# The standard labels (SDK-STANDARD "Community and contributing").
+- name: bug
+  color: d73a4a
+  description: Something does not work as documented
+- name: enhancement
+  color: a2eeef
+  description: A new feature or an improvement
+- name: documentation
+  color: 0075ca
+  description: Help pages, README, examples or the docs site
+- name: good first issue
+  color: 7057ff
+  description: A small, self-contained starting point for new contributors
+- name: help wanted
+  color: "008672"
+  description: We would welcome a pull request for this
+- name: question
+  color: d876e3
+  description: A question (Discussions is usually the better place)
+- name: needs-spec
+  color: fbca04
+  description: Needs an API or ensemble-weather-spec change first

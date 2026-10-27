@@ -1,0 +1,24 @@
+name: Documentation
+description: A help page, README section or example that is wrong, missing or unclear.
+labels: [documentation]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for helping keep the docs right. Docs fixes are welcome as pull requests too.
+  - type: input
+    id: where
+    attributes:
+      label: Which page or example?
+      description: For example ?ew_forecast, the README "Probabilities" section, or examples/storm_total.R.
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is wrong or unclear?
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: What should it say?

@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and show and tell
+    url: https://github.com/Ourea-Technologies/ensemble-weather-r/discussions
+    about: Ask a question (Q&A), share an idea, or show what you built with ensembleweather.
+  - name: Documentation
+    url: https://docs.oureawx.com/r
+    about: The guides and the R package's guide.
+  - name: Report a security vulnerability
+    url: https://github.com/Ourea-Technologies/ensemble-weather-r/security/advisories/new
+    about: Please report security issues privately, never in a public issue.

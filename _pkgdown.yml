@@ -1,0 +1,48 @@
+url: https://ourea-technologies.github.io/ensemble-weather-r/
+template:
+  bootstrap: 5
+navbar:
+  structure:
+    right: [search, github]
+  components:
+    github:
+      icon: fa-github
+      href: https://github.com/Ourea-Technologies/ensemble-weather-r
+      aria-label: GitHub
+home:
+  links:
+    - text: Ourea
+      href: https://oureawx.com
+    - text: Guides
+      href: https://docs.oureawx.com
+    - text: This package's guide
+      href: https://docs.oureawx.com/r
+reference:
+  - title: Forecasts
+    contents:
+      - ew_forecast
+      - ew_chance
+      - ew_total
+  - title: Now
+    contents:
+      - ew_current
+      - ew_alerts
+  - title: Finding locations
+    contents:
+      - ew_search
+      - ew_nearby
+      - ew_locations
+      - ew_catalog_locations
+      - ew_catalog_stations
+  - title: Runs, reports and attribution
+    contents:
+      - ew_runs
+      - ew_storm_reports
+      - ew_attribution
+  - title: Client, cache and errors
+    contents:
+      - ew_client
+      - ew_memory_cache
+      - ew_rate_limit
+      - ensembleweather_error
+      - ensembleweather-package

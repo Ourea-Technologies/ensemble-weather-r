@@ -1,0 +1,36 @@
+name: Feature request
+description: Suggest something the R package (or the API behind it) could do.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea. Start with the problem; we will work out the API together.
+        Questions are welcome in Discussions instead.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like the R API to look like?
+      description: A sketch of the call and what it returns is plenty.
+      render: r
+  - type: dropdown
+    id: server
+    attributes:
+      label: Does it need a server change?
+      description: The package never computes statistics itself; new quantities come from the API (we may move such requests to ensemble-weather-spec).
+      options:
+        - "No: the API already serves it"
+        - "Yes: the API would need to serve something new"
+        - "Not sure"
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
