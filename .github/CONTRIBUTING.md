@@ -36,9 +36,9 @@ Rscript -e 'styler::style_pkg(dry = "fail")'         # tidyverse style, no chang
 Rscript -e 'lintr::lint_package()'                   # lint (must print "No lints found")
 Rscript scripts/security-lint.R                      # no eval(parse()), shelling out or deserialising
 Rscript -e 'testthat::test_local()'                  # unit tests + every vector
-R CMD build . && R CMD check --as-cran ensembleweather_*.tar.gz   # 0 errors, warnings, notes
+R CMD build . && R CMD check --as-cran ensembleweather_*.tar.gz   # 0 errors, warnings, notes (--no-manual without LaTeX; CI checks the manual)
 R CMD INSTALL . && Rscript scripts/run-examples.R    # every example, against the local stub
-Rscript -e 'pkgdown::build_site()'                   # the docs site (needs pandoc)
+Rscript scripts/build-site.R                         # the docs site in docs/ (needs pandoc)
 Rscript scripts/check-dependencies.R                 # runtime dependencies are justified below
 Rscript scripts/check-readme.R                       # the README quickstart is examples/quickstart.R
 scripts/sync-spec --check                            # spec/ matches spec/VERSION

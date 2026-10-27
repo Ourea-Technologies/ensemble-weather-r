@@ -48,7 +48,7 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - { os: ubuntu-latest, r: release }
+          - { os: ubuntu-latest, r: release, manual: true }
           - { os: ubuntu-latest, r: oldrel-1 }
           - { os: macos-latest, r: release }
           - { os: macos-latest, r: oldrel-1 }
@@ -69,13 +69,16 @@ jobs:
         with:
           r-version: ${{ matrix.config.r }}
           use-public-rspm: true
+      # One job also builds and checks the PDF manual, as CRAN does.
+      - if: matrix.config.manual
+        uses: r-lib/actions/setup-tinytex@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
       - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
         with:
           extra-packages: any::rcmdcheck
           needs: check
       - uses: r-lib/actions/check-r-package@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
         with:
-          args: 'c("--no-manual", "--as-cran")'
+          args: ${{ matrix.config.manual && '"--as-cran"' || 'c("--no-manual", "--as-cran")' }}
           error-on: '"note"'
           upload-snapshots: true
 
@@ -139,8 +142,10 @@ jobs:
         with:
           extra-packages: any::pkgdown, local::.
           needs: website
-      - name: Build the site
-        run: Rscript -e 'pkgdown::check_pkgdown(); pkgdown::build_site_github_pages(new_process = FALSE, install = FALSE)'
+      - name: Build the site (examples run against the local stub; warnings fail)
+        run: |
+          Rscript -e 'pkgdown::check_pkgdown()'
+          Rscript scripts/build-site.R docs
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: pkgdown-site

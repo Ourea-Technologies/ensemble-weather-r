@@ -6,7 +6,8 @@ official R client for the Ourea probabilistic weather API
 
 ## Test environments
 
-* local: macOS (aarch64-apple-darwin, Homebrew), R 4.6.1
+* local: macOS (aarch64-apple-darwin, Homebrew), R 4.6.1, `--as-cran --no-manual`
+  (no LaTeX locally; the PDF manual is checked in CI on ubuntu-latest)
 * GitHub Actions (r-lib/actions): ubuntu-latest, macos-latest and
   windows-latest, each on R release and oldrel
 * win-builder (R-devel): to be run before submission
