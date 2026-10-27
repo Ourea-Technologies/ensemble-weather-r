@@ -1,0 +1,37 @@
+citHeader("To cite ensembleweather in publications, please cite both the package and the forecast data it retrieved:")
+
+bibentry(
+  bibtype = "Manual",
+  key = "ensembleweather",
+  title = "{ensembleweather}: Client for the {Ourea} Probabilistic Weather {API}",
+  author = c(person("Harrison", "Bowden"), person("Ourea Technologies")),
+  organization = "Ourea Technologies",
+  year = "2026",
+  note = paste("R package version", meta$Version),
+  url = "https://docs.oureawx.com/r",
+  textVersion = paste0(
+    "Bowden H, Ourea Technologies (2026). ensembleweather: Client for the Ourea ",
+    "Probabilistic Weather API. R package version ", meta$Version, ". ",
+    "https://docs.oureawx.com/r"
+  )
+)
+
+bibentry(
+  bibtype = "Misc",
+  key = "ourea-forecast",
+  title = "{Ourea} probabilistic ensemble weather forecasts ({API} v1)",
+  author = person("Ourea Technologies"),
+  organization = "Ourea Technologies",
+  year = "2026",
+  url = "https://oureawx.com",
+  note = paste(
+    "Retrieved with the ensembleweather R package. Report the model run's",
+    "initialization time and the retrieval date with your results, and credit the",
+    "data providers listed by ew_attribution()."
+  ),
+  textVersion = paste(
+    "Ourea Technologies (2026). Ourea probabilistic ensemble weather forecasts (API v1).",
+    "https://oureawx.com. Report the model run's initialization time and the retrieval",
+    "date, and credit the data providers listed by ew_attribution()."
+  )
+)
