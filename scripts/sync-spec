@@ -1,0 +1,42 @@
+#!/bin/sh
+# Copy ensemble-weather-spec at the ref in spec/VERSION into spec/.
+#
+#   scripts/sync-spec            write spec/ from the ref in spec/VERSION
+#   scripts/sync-spec <ref>      pin a new ref, then write spec/
+#   scripts/sync-spec --check    fail if spec/ differs from that ref (CI)
+#
+# OUREA_SPEC_REPO overrides where the spec comes from (a local clone or a
+# URL); the default is the GitHub repository.
+set -eu
+
+root=$(cd "$(dirname "$0")/.." && pwd)
+repo=${OUREA_SPEC_REPO:-https://github.com/Ourea-Technologies/ensemble-weather-spec}
+mode=write
+case "${1:-}" in
+  --check) mode=check ;;
+  "") ;;
+  *) printf '%s\n' "$1" > "$root/spec/VERSION" ;;
+esac
+ref=$(tr -d '[:space:]' < "$root/spec/VERSION")
+
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+git clone --quiet "$repo" "$work/spec"
+git -C "$work/spec" checkout --quiet "$ref"
+mkdir -p "$work/out"
+git -C "$work/spec" archive "$ref" | tar -x -C "$work/out"
+printf '%s\n' "$ref" > "$work/out/VERSION"
+
+if [ "$mode" = check ]; then
+  if diff -r "$work/out" "$root/spec" > "$work/diff.txt"; then
+    echo "spec/ matches ensemble-weather-spec at $ref"
+  else
+    cat "$work/diff.txt"
+    echo "spec/ differs from ensemble-weather-spec at $ref: run scripts/sync-spec" >&2
+    exit 1
+  fi
+else
+  rm -rf "$root/spec"
+  cp -R "$work/out" "$root/spec"
+  echo "spec/ is now ensemble-weather-spec at $ref"
+fi

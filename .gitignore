@@ -1,0 +1,6 @@
+.scratch/
+docs/
+*.tar.gz
+*.Rcheck/
+.Rproj.user/
+.Rhistory

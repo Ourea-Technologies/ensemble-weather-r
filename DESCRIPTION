@@ -1,0 +1,44 @@
+Package: ensembleweather
+Title: Client for the 'Ourea' Probabilistic Weather API
+Version: 0.1.0
+Authors@R: c(
+    person("Harrison", "Bowden", , "harrison@oureawx.com", role = c("aut", "cre")),
+    person("Ourea Technologies", role = c("cph", "fnd"))
+  )
+Description: The official R client for the 'Ourea' probabilistic weather
+    forecast API <https://oureawx.com>. 'Ourea' serves ensemble forecasts for
+    the contiguous United States: every value is a distribution computed
+    from the full set of model members, so results come back as tibbles of
+    quantiles (p10 to p90), the server's own probabilities of crossing a
+    threshold, and window totals for precipitation and snowfall. Requests
+    are built in one canonical form so they share the edge cache, responses
+    are revalidated with an 'ETag' cache, and errors are classed
+    conditions.
+License: BSD_2_clause + file LICENSE
+URL: https://docs.oureawx.com/r,
+    https://github.com/Ourea-Technologies/ensemble-weather-r,
+    https://ourea-technologies.github.io/ensemble-weather-r/,
+    https://oureawx.com
+BugReports: https://github.com/Ourea-Technologies/ensemble-weather-r/issues
+Depends:
+    R (>= 4.1)
+Imports:
+    cli (>= 3.6.0),
+    httr2 (>= 1.1.0),
+    jsonlite (>= 1.8.0),
+    rlang (>= 1.1.0),
+    stats,
+    tibble (>= 3.2.0)
+Suggests:
+    testthat (>= 3.2.0),
+    utils,
+    withr (>= 3.0.0),
+    yaml (>= 2.3.0)
+Config/testthat/edition: 3
+Config/ensembleweather/spdx-license: BSD-2-Clause
+Config/Needs/website: pkgdown
+Encoding: UTF-8
+Language: en-US
+Roxygen: list(markdown = TRUE)
+X-schema.org-keywords: ourea, weather, forecast, ensemble, probabilistic
+Config/roxygen2/version: 8.1.1

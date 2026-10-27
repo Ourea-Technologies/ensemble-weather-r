@@ -1,0 +1,11 @@
+linters: linters_with_defaults(
+    line_length_linter(120),
+    object_length_linter(40)
+  )
+encoding: "UTF-8"
+exclusions: list(
+    "spec",
+    ".scratch",
+    "docs",
+    "tests/testthat" = list(object_usage_linter = Inf)
+  )
