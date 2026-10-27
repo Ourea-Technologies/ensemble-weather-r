@@ -1,0 +1,147 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Format, lint, docs drift, dependencies
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
+        with:
+          use-public-rspm: true
+      - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
+        with:
+          extra-packages: any::lintr, any::styler, any::roxygen2
+          needs: lint
+      - name: styler (tidyverse style, no changes)
+        run: Rscript -e 'styler::style_pkg(dry = "fail"); styler::style_dir("examples", dry = "fail"); styler::style_dir("scripts", dry = "fail")'
+      - name: lintr
+        run: |
+          Rscript -e 'l <- c(lintr::lint_package(), lintr::lint_dir("examples"), lintr::lint_dir("scripts")); print(l); if (length(l)) quit(status = 1)'
+      - name: roxygen2 output is committed
+        run: |
+          Rscript -e 'roxygen2::roxygenise()'
+          git diff --exit-code -- NAMESPACE man
+      - name: Runtime dependencies are justified
+        run: Rscript scripts/check-dependencies.R
+      - name: README quickstart is examples/quickstart.R
+        run: Rscript scripts/check-readme.R
+      - name: spec/ matches spec/VERSION
+        run: scripts/sync-spec --check
+
+  check:
+    name: R CMD check (${{ matrix.config.os }}, R ${{ matrix.config.r }})
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - { os: ubuntu-latest, r: release }
+          - { os: ubuntu-latest, r: oldrel-1 }
+          - { os: macos-latest, r: release }
+          - { os: macos-latest, r: oldrel-1 }
+          - { os: windows-latest, r: release }
+          - { os: windows-latest, r: oldrel-1 }
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      R_KEEP_PKG_SOURCE: yes
+      NOT_CRAN: true
+      # The tests read the pinned spec (vectors, OpenAPI) from the checkout.
+      ENSEMBLEWEATHER_SPEC: ${{ github.workspace }}/spec
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: r-lib/actions/setup-pandoc@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
+        with:
+          r-version: ${{ matrix.config.r }}
+          use-public-rspm: true
+      - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
+        with:
+          extra-packages: any::rcmdcheck
+          needs: check
+      - uses: r-lib/actions/check-r-package@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
+        with:
+          args: 'c("--no-manual", "--as-cran")'
+          error-on: '"note"'
+          upload-snapshots: true
+
+  examples:
+    name: Examples (against the local stub)
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
+        with:
+          use-public-rspm: true
+      - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
+        with:
+          extra-packages: local::.
+      - name: Every example, anonymous, against the stub API
+        run: Rscript scripts/run-examples.R
+
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      NOT_CRAN: true
+      ENSEMBLEWEATHER_SPEC: ${{ github.workspace }}/spec
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
+        with:
+          use-public-rspm: true
+      - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
+        with:
+          extra-packages: any::covr
+          needs: coverage
+      - name: Test coverage (reported, not gated before 1.0)
+        run: Rscript -e 'cov <- covr::package_coverage(); print(cov); covr::to_cobertura(cov, "cobertura.xml")'
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage
+          path: cobertura.xml
+
+  docs:
+    name: Docs site (pkgdown)
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: r-lib/actions/setup-pandoc@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
+        with:
+          use-public-rspm: true
+      - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
+        with:
+          extra-packages: any::pkgdown, local::.
+          needs: website
+      - name: Build the site
+        run: Rscript -e 'pkgdown::check_pkgdown(); pkgdown::build_site_github_pages(new_process = FALSE, install = FALSE)'
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: pkgdown-site
+          path: docs

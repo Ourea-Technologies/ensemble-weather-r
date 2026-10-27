@@ -1,0 +1,34 @@
+name: Live contract
+
+# Nightly: the quickstart and a short read-only contract run against the live
+# API with a CI key. Never on pull requests (forks never see the secret).
+on:
+  schedule:
+    - cron: "29 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live:
+    if: github.repository == 'Ourea-Technologies/ensemble-weather-r'
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
+        with:
+          use-public-rspm: true
+      - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
+        with:
+          extra-packages: local::.
+      - name: Quickstart (anonymous)
+        run: Rscript examples/quickstart.R
+      - name: Contract run (read-only key)
+        run: Rscript scripts/live-contract.R
+        env:
+          OUREA_API_KEY: ${{ secrets.OUREA_CI_API_KEY }}

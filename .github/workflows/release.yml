@@ -1,0 +1,80 @@
+name: Release
+
+# A tag vX.Y.Z on main builds and checks the source tarball and attaches it
+# (with build provenance) to the GitHub release. CRAN submission is manual
+# (devtools::submit_cran() by the maintainer; see .github/CONTRIBUTING.md):
+# nothing here publishes to CRAN.
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      NOT_CRAN: true
+      ENSEMBLEWEATHER_SPEC: ${{ github.workspace }}/spec
+    outputs:
+      tarball: ${{ steps.build.outputs.tarball }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: r-lib/actions/setup-pandoc@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
+        with:
+          use-public-rspm: true
+      - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
+        with:
+          extra-packages: any::rcmdcheck
+      - name: The tag matches DESCRIPTION
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version=$(Rscript -e 'cat(read.dcf("DESCRIPTION", "Version"))')
+          test "v$version" = "$TAG"
+      - name: R CMD build
+        id: build
+        run: |
+          R CMD build .
+          echo "tarball=$(ls ensembleweather_*.tar.gz)" >> "$GITHUB_OUTPUT"
+      - name: R CMD check --as-cran
+        env:
+          TARBALL: ${{ steps.build.outputs.tarball }}
+        run: Rscript -e 'rcmdcheck::rcmdcheck(Sys.getenv("TARBALL"), args = c("--no-manual", "--as-cran"), error_on = "note")'
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: tarball
+          path: ensembleweather_*.tar.gz
+
+  github-release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create the GitHub release
+      id-token: write # sign the build provenance
+      attestations: write # store the build provenance
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: tarball
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: ensembleweather_*.tar.gz
+      - name: Release notes from CHANGELOG.md
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="${TAG#v}"
+          awk -v v="$version" '$0 ~ "^## \\[" v "\\]" {p=1; next} /^## \[/ {p=0} p' CHANGELOG.md > notes.md
+      - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        with:
+          body_path: notes.md
+          files: ensembleweather_*.tar.gz

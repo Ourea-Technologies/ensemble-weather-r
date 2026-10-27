@@ -1,0 +1,8 @@
+version: 2
+updates:
+  # Dependabot has no R (CRAN) ecosystem; renv.lock is refreshed by hand and
+  # audited weekly by security.yml (osv-scanner).
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
