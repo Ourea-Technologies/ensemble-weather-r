@@ -24,6 +24,7 @@ ew_forecast(
   exclude_sources = NULL,
   nowcast = NULL,
   diagnostics = NULL,
+  include = NULL,
   feels_like = NULL,
   client = NULL
 )
@@ -48,6 +49,7 @@ ew_forecast_at(
   exclude_sources = NULL,
   nowcast = NULL,
   diagnostics = NULL,
+  include = NULL,
   feels_like = NULL,
   client = NULL
 )
@@ -94,9 +96,13 @@ leave out.}
 \item{nowcast}{Apply the observation nowcast to the first hours (default
 \code{TRUE}).}
 
-\item{diagnostics}{Character vector of diagnostic blocks to include.}
+\item{diagnostics}{Character vector of diagnostic blocks to include
+(\code{"provenance"}).}
 
-\item{feels_like}{Character vector of feels-like indices (default \code{"nws"}).}
+\item{include}{Character vector of opt-in variables: \code{"skin_temperature"},
+\code{"mslp"} (served only when asked for).}
+
+\item{feels_like}{The feels-like index (\code{"nws"}, the default and only one).}
 
 \item{client}{A client from \code{\link[=ew_client]{ew_client()}}; \code{NULL} uses the shared default
 client.}
@@ -114,13 +120,16 @@ An \code{ensembleweather_forecast}: a list with
 \item \code{hourly}: a tibble, one row per hour (\code{NULL} with \code{hourly = FALSE});
 \item \code{daily}: a tibble, one row per day (\code{NULL} with \code{daily = FALSE});
 \item \code{probabilities}: when you asked with \code{prob}, a tibble with the
-reference class of each answer (\code{variable}, \code{op}, \code{threshold}, \code{unit},
-\code{window_start}, \code{window_end}, \code{aggregation}, \code{from}, \code{to}, \code{members})
-and its \code{probability}, which is \code{NA} when the forecast does not reach
-the window's end (never 0);
+canonical \code{term} the server echoes (each answer is matched to your
+term by it), the reference class of each answer (\code{variable}, \code{op},
+\code{threshold}, \code{unit}, \code{window_start}, \code{window_end}, \code{aggregation},
+\code{from}, \code{to}, \code{members}) and its \code{probability}, which is \code{NA} (never 0)
+when it cannot be answered, with the reason in \code{null_reason}
+(\code{"window_not_covered"}, \code{"too_few_members"}, \code{"variable_unavailable"});
 \item \code{window_totals}: when you asked with \code{totals}, a tibble of each
-window's distribution (\code{mean}, \code{p10} ... \code{p90}, \code{min}, \code{max}, all \code{NA}
-when the window is not covered);
+window's \code{term}, \code{aggregation} and distribution (\code{mean}, \code{p10} ...
+\code{p90}, \code{min}, \code{max}, all \code{NA} when it cannot be answered, with the
+reason in \code{null_reason});
 \item \code{snow_outlook}, \code{elevation_forecasts}, \code{nearest_sensors}, \code{point},
 \code{current}, \code{thresholds}, \code{applied}, \code{attribution} and the other fields
 of the API's \code{ForecastResponse}, when served.
@@ -139,9 +148,12 @@ Pro key.
 Every value is a distribution computed by the server from the full
 ensemble. The hourly series has one row per hour and, for each variable,
 the columns \verb{<variable>_mean}, \verb{_p10}, \verb{_p25}, \verb{_p50}, \verb{_p75}, \verb{_p90} and,
-where served, \verb{_min} and \verb{_max}. The p50 column is the median, not "the
-forecast". Wind direction is circular, so its \code{max} may be numerically
-less than its \code{min}; it is passed through as served.
+\verb{_min} and \verb{_max}. The p50 column is the median, not "the forecast".
+Wind direction is the circular distribution instead: \code{wind_direction_mean},
+\verb{_stddev}, and the sectors \code{wind_direction_sector_50_from} / \verb{_to} and
+\code{wind_direction_sector_90_from} / \verb{_to}, each running clockwise from \code{from}
+to \code{to}, so \code{to} may be numerically less than \code{from} (it crosses north);
+it is passed through as served.
 
 Values are in the request's units: metric is °C, mm, m/s and m; imperial
 is °F, in, mph and ft; kelvin is metric with K. They are never converted

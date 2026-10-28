@@ -8,9 +8,12 @@
 #' Every value is a distribution computed by the server from the full
 #' ensemble. The hourly series has one row per hour and, for each variable,
 #' the columns `<variable>_mean`, `_p10`, `_p25`, `_p50`, `_p75`, `_p90` and,
-#' where served, `_min` and `_max`. The p50 column is the median, not "the
-#' forecast". Wind direction is circular, so its `max` may be numerically
-#' less than its `min`; it is passed through as served.
+#' `_min` and `_max`. The p50 column is the median, not "the forecast".
+#' Wind direction is the circular distribution instead: `wind_direction_mean`,
+#' `_stddev`, and the sectors `wind_direction_sector_50_from` / `_to` and
+#' `wind_direction_sector_90_from` / `_to`, each running clockwise from `from`
+#' to `to`, so `to` may be numerically less than `from` (it crosses north);
+#' it is passed through as served.
 #'
 #' Values are in the request's units: metric is °C, mm, m/s and m; imperial
 #' is °F, in, mph and ft; kelvin is metric with K. They are never converted
@@ -41,8 +44,11 @@
 #'   leave out.
 #' @param nowcast Apply the observation nowcast to the first hours (default
 #'   `TRUE`).
-#' @param diagnostics Character vector of diagnostic blocks to include.
-#' @param feels_like Character vector of feels-like indices (default `"nws"`).
+#' @param diagnostics Character vector of diagnostic blocks to include
+#'   (`"provenance"`).
+#' @param include Character vector of opt-in variables: `"skin_temperature"`,
+#'   `"mslp"` (served only when asked for).
+#' @param feels_like The feels-like index (`"nws"`, the default and only one).
 #' @param client A client from [ew_client()]; `NULL` uses the shared default
 #'   client.
 #' @return An `ensembleweather_forecast`: a list with
@@ -50,13 +56,16 @@
 #'   * `hourly`: a tibble, one row per hour (`NULL` with `hourly = FALSE`);
 #'   * `daily`: a tibble, one row per day (`NULL` with `daily = FALSE`);
 #'   * `probabilities`: when you asked with `prob`, a tibble with the
-#'     reference class of each answer (`variable`, `op`, `threshold`, `unit`,
-#'     `window_start`, `window_end`, `aggregation`, `from`, `to`, `members`)
-#'     and its `probability`, which is `NA` when the forecast does not reach
-#'     the window's end (never 0);
+#'     canonical `term` the server echoes (each answer is matched to your
+#'     term by it), the reference class of each answer (`variable`, `op`,
+#'     `threshold`, `unit`, `window_start`, `window_end`, `aggregation`,
+#'     `from`, `to`, `members`) and its `probability`, which is `NA` (never 0)
+#'     when it cannot be answered, with the reason in `null_reason`
+#'     (`"window_not_covered"`, `"too_few_members"`, `"variable_unavailable"`);
 #'   * `window_totals`: when you asked with `totals`, a tibble of each
-#'     window's distribution (`mean`, `p10` ... `p90`, `min`, `max`, all `NA`
-#'     when the window is not covered);
+#'     window's `term`, `aggregation` and distribution (`mean`, `p10` ...
+#'     `p90`, `min`, `max`, all `NA` when it cannot be answered, with the
+#'     reason in `null_reason`);
 #'   * `snow_outlook`, `elevation_forecasts`, `nearest_sensors`, `point`,
 #'     `current`, `thresholds`, `applied`, `attribution` and the other fields
 #'     of the API's `ForecastResponse`, when served.
@@ -93,6 +102,7 @@ ew_forecast <- function(location,
                         exclude_sources = NULL,
                         nowcast = NULL,
                         diagnostics = NULL,
+                        include = NULL,
                         feels_like = NULL,
                         client = NULL) {
   local_user_call()
@@ -105,7 +115,7 @@ ew_forecast <- function(location,
     include_past = include_past, models = models, members = members, daily = daily,
     max_days = max_days, hourly = hourly, run = run, sources = sources,
     exclude_sources = exclude_sources, nowcast = nowcast, diagnostics = diagnostics,
-    feels_like = feels_like
+    include = include, feels_like = feels_like
   )
 }
 
@@ -134,6 +144,7 @@ ew_forecast_at <- function(lat,
                            exclude_sources = NULL,
                            nowcast = NULL,
                            diagnostics = NULL,
+                           include = NULL,
                            feels_like = NULL,
                            client = NULL) {
   local_user_call()
@@ -150,13 +161,13 @@ ew_forecast_at <- function(lat,
     include_past = include_past, models = models, members = members, daily = daily,
     max_days = max_days, hourly = hourly, run = run, sources = sources,
     exclude_sources = exclude_sources, nowcast = nowcast, diagnostics = diagnostics,
-    feels_like = feels_like
+    include = include, feels_like = feels_like
   )
 }
 
 forecast_request <- function(client, name, path, query, units, prob, totals, max_hours,
                              include_past, models, members, daily, max_days, hourly, run,
-                             sources, exclude_sources, nowcast, diagnostics, feels_like) {
+                             sources, exclude_sources, nowcast, diagnostics, include, feels_like) {
   units <- check_units(units %||% client$units)
   chances <- as_terms(prob, "ensembleweather_chance")
   wanted <- as_terms(totals, "ensembleweather_total")
@@ -181,6 +192,7 @@ forecast_request <- function(client, name, path, query, units, prob, totals, max
   query <- query_add_list(query, "exclude_sources", exclude_sources)
   query <- query_add(query, "nowcast", nowcast, TRUE)
   query <- query_add_list(query, "diagnostics", diagnostics)
+  query <- query_add_list(query, "include", include)
   query <- query_add_list(query, "feels_like", feels_like, "nws")
   prob_wire <- prob_query(chances, units)
   totals_wire <- totals_query(wanted)
@@ -188,11 +200,11 @@ forecast_request <- function(client, name, path, query, units, prob, totals, max
   query <- query_add_raw(query, "totals", totals_wire$wire)
 
   response <- perform(client, new_operation(name, path, query))
-  forecast <- new_forecast(response$data, units, prob_wire$keys, totals_wire$keys)
+  forecast <- new_forecast(response$data, units, prob_wire$terms, totals_wire$terms)
   with_meta(forecast, response$meta)
 }
 
-new_forecast <- function(data, units, chance_keys, total_keys) {
+new_forecast <- function(data, units, chance_terms, total_terms) {
   body <- decode_object(data, "ForecastResponse")
   forecast <- body$forecast
   structure(
@@ -205,8 +217,8 @@ new_forecast <- function(data, units, chance_keys, total_keys) {
       hourly = forecast$timeseries,
       daily = forecast$daily,
       snow_outlook = forecast$snow_outlook,
-      probabilities = answer_probabilities(body$probabilities, units, chance_keys),
-      window_totals = answer_totals(body$window_totals, units, total_keys),
+      probabilities = answer_probabilities(body$probabilities, units, chance_terms),
+      window_totals = answer_totals(body$window_totals, units, total_terms),
       elevation_forecasts = body$elevation_forecasts,
       nowcast_applied = body$nowcast_applied,
       nowcast_unavailable = body$nowcast_unavailable,
@@ -223,39 +235,32 @@ new_forecast <- function(data, units, chance_keys, total_keys) {
   )
 }
 
-# Put the server's answers (in the order sent) back in the caller's order,
+# Put the server's answers (in the order sent) back in the caller's order by
+# the canonical `term` each one echoes, never by position (BEHAVIOR 4, 5),
 # labelled with their units. An absent list stays absent; a present list
 # without an answer for one of the caller's terms is an error.
-answer_probabilities <- function(results, units, keys) {
+match_terms <- function(results, terms, what) {
+  index <- match(terms, results$term)
+  if (anyNA(index)) {
+    abort_unexpected(paste0(
+      "The API's response has no answer for the ", what, " ", terms[[which(is.na(index))[[1]]]], "."
+    ))
+  }
+  index
+}
+
+answer_probabilities <- function(results, units, terms) {
   if (is.null(results)) {
     return(NULL)
+  }
+  if (length(terms) > 0L) {
+    results <- results[match_terms(results, terms, "term"), ]
   }
   units_of <- vapply(results$variable, function(v) {
     if (v %in% names(variable_kinds)) request_unit(v, units) else NA_character_
   }, "", USE.NAMES = FALSE)
-  if (length(keys) > 0L) {
-    answered <- vapply(seq_len(nrow(results)), function(i) {
-      variable <- results$variable[[i]]
-      digits <- if (variable %in% names(variable_kinds)) threshold_precision(variable, units) else 6L
-      key_string(list(
-        variable, results$op[[i]], format_rounded(results$threshold[[i]], digits),
-        results$window_start_hours[[i]], results$window_end_hours[[i]], results$aggregation[[i]]
-      ))
-    }, "")
-    wanted <- vapply(keys, key_string, "")
-    index <- match(wanted, answered)
-    if (anyNA(index)) {
-      missing <- keys[[which(is.na(index))[[1]]]]
-      abort_unexpected(paste0(
-        "The API's response has no answer for the term ",
-        paste(missing$variable, missing$op, missing$threshold, wire_window(missing$start, missing$end), sep = ":"),
-        "."
-      ))
-    }
-    results <- results[index, ]
-    units_of <- units_of[index]
-  }
   tibble::tibble(
+    term = results$term,
     variable = results$variable,
     op = results$op,
     threshold = results$threshold,
@@ -266,38 +271,32 @@ answer_probabilities <- function(results, units, keys) {
     from = results$from,
     to = results$to,
     members = results$members,
-    probability = results$probability
+    probability = results$probability,
+    null_reason = results$null_reason
   )
 }
 
-answer_totals <- function(results, units, keys) {
+answer_totals <- function(results, units, terms) {
   if (is.null(results)) {
     return(NULL)
   }
-  if (length(keys) > 0L) {
-    answered <- paste(results$variable, results$window_start_hours, results$window_end_hours, sep = "|")
-    wanted <- vapply(keys, key_string, "")
-    index <- match(wanted, answered)
-    if (anyNA(index)) {
-      missing <- keys[[which(is.na(index))[[1]]]]
-      abort_unexpected(paste0(
-        "The API's response has no answer for the window total ",
-        missing$variable, ":", wire_window(missing$start, missing$end), "."
-      ))
-    }
-    results <- results[index, ]
+  if (length(terms) > 0L) {
+    results <- results[match_terms(results, terms, "window total"), ]
   }
   unit <- vapply(results$variable, function(v) {
     if (v %in% amount_variables) request_unit(v, units) else NA_character_
   }, "", USE.NAMES = FALSE)
   tibble::tibble(
+    term = results$term,
     variable = results$variable,
     unit = unit,
     window_start = results$window_start_hours,
     window_end = results$window_end_hours,
+    aggregation = results$aggregation,
     from = results$from,
     to = results$to,
     members = results$members,
+    null_reason = results$null_reason,
     mean = results$quantiles_mean,
     p10 = results$quantiles_p10,
     p25 = results$quantiles_p25,

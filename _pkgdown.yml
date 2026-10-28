@@ -34,10 +34,9 @@ reference:
       - ew_locations
       - ew_catalog_locations
       - ew_catalog_stations
-  - title: Runs, reports and attribution
+  - title: Runs and attribution
     contents:
       - ew_runs
-      - ew_storm_reports
       - ew_attribution
   - title: Client, cache and errors
     contents:

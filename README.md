@@ -80,8 +80,9 @@ forecast <- ew_forecast("or/mt-hood-meadows", prob = list(
   ew_chance("snowfall", ">=", 12, "in", window = 72), # P(0-72 h snowfall >= 12 in)
   ew_chance("temperature", "<=", 32, "degF", window = c(6, 18), aggregation = "all")
 ))
-forecast$probabilities # in your order: variable, op, threshold, unit, window_start,
-                       # window_end, aggregation, from, to, members, probability
+forecast$probabilities # in your order (matched by `term`): term, variable, op, threshold,
+                       # unit, window_start, window_end, aggregation, from, to, members,
+                       # probability, null_reason
 ```
 
 For a **storm total**, ask for the window total's distribution with
@@ -89,7 +90,7 @@ For a **storm total**, ask for the window total's distribution with
 
 ```r
 forecast <- ew_forecast("or/mt-hood-meadows", totals = ew_total("snowfall", 72))
-forecast$window_totals[, c("variable", "p10", "p50", "p90", "unit")] # NA when not covered
+forecast$window_totals[, c("variable", "p10", "p50", "p90", "unit", "null_reason")] # NA + reason
 ```
 
 Read **quantiles** straight from the hourly tibble; `_p50` is the median,
@@ -115,7 +116,7 @@ request's units before sending; response values are never converted. More in
 | [`storm_total.R`](examples/storm_total.R) | `totals` window distributions for precipitation and snowfall |
 | [`search_and_catalog.R`](examples/search_and_catalog.R) | search, then page through the catalog with the cursor |
 | [`current_and_alerts.R`](examples/current_and_alerts.R) | current conditions and active alerts for a location |
-| [`error_handling.R`](examples/error_handling.R) | catching an out-of-coverage error by its class; reading rate-limit state |
+| [`error_handling.R`](examples/error_handling.R) | catching an out-of-coverage error by its class, the keyless alternative to `PRO_REQUIRED`; reading rate-limit state |
 | [`units.R`](examples/units.R) | the same forecast in metric and imperial |
 
 ## Errors, retries and rate limits
@@ -125,8 +126,9 @@ with one class per category: `ensembleweather_error_authentication`,
 `_permission`, `_not_found`, `_invalid_request`, `_outside_coverage`,
 `_rate_limited`, `_unavailable`, `_connection` (no response at all),
 `_usage` (refused before sending) and `_unexpected_response`. API errors
-carry `status`, `code` (the API's string, verbatim), `request_id` and, for
-429s, `retry_after`:
+carry `status`, `code` (the API's string, verbatim), `request_id`, `doc_url`,
+`param` (on a 400 about one parameter), `nearest_location` (on a
+`PRO_REQUIRED` coordinate request near a named location) and `retry_after`:
 
 ```r
 tryCatch(
@@ -136,7 +138,8 @@ tryCatch(
 ```
 
 Connection errors, 429, 502, 503 and 504 are retried up to `max_retries`
-(default 2) with full-jitter backoff, honouring `Retry-After` up to 60 s.
+(default 2) with full-jitter backoff, honouring `Retry-After` (on 429, 503
+and 504) up to 60 s.
 Nothing else is retried. `ew_rate_limit(result)` (or `ew_rate_limit(client)`)
 returns the rate-limit state the server reported (`limit`, `remaining`,
 `reset`, `policy`); the package never hard-codes limits.

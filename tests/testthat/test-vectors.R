@@ -32,8 +32,6 @@ operation_functions <- c(
   listCatalogStations = "ew_catalog_stations_page",
   getCatalogStation = "ew_catalog_station",
   getAvailableRuns = "ew_runs",
-  getStormReports = "ew_storm_reports",
-  getStormReport = "ew_storm_report",
   getAttribution = "ew_attribution"
 )
 
@@ -58,10 +56,10 @@ vector_call <- function(call, client) {
     fn <- collecting_functions[[fn]]
   }
   args$iterate <- NULL
-  if (!is.null(args$state) && !is.null(args$name)) {
-    args$location <- list(state = args$state, slug = args$name)
+  if (!is.null(args$state) && !is.null(args$slug)) {
+    args$location <- list(state = args$state, slug = args$slug)
     args$state <- NULL
-    args$name <- NULL
+    args$slug <- NULL
   }
   if (!is.null(args$prob)) {
     args$prob <- lapply(args$prob, function(term) {

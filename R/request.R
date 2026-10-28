@@ -7,7 +7,7 @@ max_retry_after <- 60
 max_body_bytes <- 64 * 1024^2
 redirect_statuses <- c(301L, 302L, 307L, 308L)
 retry_statuses <- c(429L, 502L, 503L, 504L)
-retry_after_statuses <- c(429L, 503L)
+retry_after_statuses <- c(429L, 503L, 504L)
 
 # curl errors that mean the server's certificate failed verification: never
 # retried, since another attempt cannot fix them.

@@ -38,12 +38,14 @@ ew_catalog_station(slug, ..., include = NULL, locale = NULL, client = NULL)
 
 \item{country}{Limit to one country, such as \code{"US"}.}
 
-\item{network}{Limit to one or more networks, such as \code{"snotel"}.}
+\item{network}{Limit to one or more networks, snake_case, such as
+\code{c("snotel", "raws")}.}
 
 \item{capability}{Limit to stations measuring every one of these, such as
-\code{c("snow_depth", "swe")}.}
+\code{c("snow_depth", "swe")} (sent as one sorted list).}
 
-\item{status}{Limit to one station status, such as \code{"active"}.}
+\item{status}{Limit to one station status, snake_case: \code{"active"},
+\code{"intermittent"}, \code{"inactive"}, \code{"decommissioned"} or \code{"unknown"}.}
 
 \item{limit}{The page size (1 to 100; default 20).}
 
@@ -54,7 +56,7 @@ client.}
 
 \item{slug}{The location's (or station's) slug, such as \code{"mt-hood-meadows"}.}
 
-\item{include}{Optional blocks to include, such as \code{c("content", "template", "ads")}.}
+\item{include}{Optional blocks to include: \code{"content"}, \code{"template"}.}
 
 \item{locale}{The language of the content (default \code{"en"}).}
 }

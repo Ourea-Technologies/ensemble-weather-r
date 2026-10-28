@@ -29,8 +29,6 @@ exposed <- c(
   listCatalogStations = "ew_catalog_stations",
   getCatalogStation = "ew_catalog_station",
   getAvailableRuns = "ew_runs",
-  getStormReports = "ew_storm_reports",
-  getStormReport = "ew_storm_report",
   getAttribution = "ew_attribution"
 )
 
@@ -70,6 +68,9 @@ schema_shape <- function(spec, schema) {
 modelled_elsewhere <- c(
   ErrorResponse = "becomes the error conditions",
   UnitSystem = "a plain string",
+  ConditionIcon = "a plain string",
+  NullReason = "a plain string",
+  NextCursor = "a plain string (NULL on the last page)",
   ModelMeans = "ModelMeansEntry[] (id + ModelStats)",
   FreezingLevel = "one FreezingLevel table for the three variants",
   FreezingLevelBelowSurface = "FreezingLevel",
@@ -112,12 +113,8 @@ test_that("tibble columns are unique for every schema", {
   }
 })
 
-# The spec's response examples. The two forecast examples do not match the
-# spec's own ForecastResponse schema (their location has no slug, state or
-# timezone, `elevation` where the schema says `elevation_m`, a camelCase
-# type, an abridged forecast): a spec bug, so they are expected to be refused.
-spec_bug_examples <- c("getLocationForecast", "getPointForecast")
-
+# The spec's response examples decode (since 8b85fea the forecast examples match
+# their own ForecastResponse schema).
 test_that("the spec's examples decode with the documented shapes", {
   spec <- openapi()
   ops <- operations(spec)
@@ -130,13 +127,7 @@ test_that("the spec's examples decode with the documented shapes", {
     if (!is.null(content[["example"]])) examples <- list(content[["example"]])
     for (example in examples) {
       data <- jsonlite::parse_json(jsonlite::toJSON(example, auto_unbox = TRUE, null = "null"))
-      if (id %in% spec_bug_examples) {
-        expect_error(ensembleweather:::decode_object(data, basename(ref)),
-          class = "ensembleweather_error_unexpected_response"
-        )
-      } else {
-        expect_no_error(ensembleweather:::decode_object(data, basename(ref)))
-      }
+      expect_no_error(ensembleweather:::decode_object(data, basename(ref)))
       checked <- checked + 1L
     }
   }

@@ -1,11 +1,12 @@
 # Canonical request URLs (BEHAVIOR 3.1): one request, one edge-cache entry.
 #
 # * a parameter the caller did not set, or set to its default, is omitted;
-# * parameters are sorted by name (C-locale byte order) and each appears once,
-#   except a parameter repeated by design (`capability`), whose values are
-#   sorted and de-duplicated;
+# * parameters are sorted by name (C-locale byte order) and each appears once;
+# * a comma list (`sources`, `include`, `network`, `capability`, ...) is
+#   sorted and de-duplicated, its items joined by a literal `,`;
 # * values are RFC 3986 percent-encoded (space as %20, uppercase hex), except
-#   that `prob` and `totals` keep `:` and `,` literal;
+#   that `prob` and `totals` keep `:` and `,` literal and a comma list keeps
+#   its separating `,`;
 # * numbers are the shortest decimal that round-trips, never an exponent.
 
 unreserved_bytes <- as.integer(charToRaw(
@@ -124,32 +125,21 @@ query_add <- function(query, name, value, default = NULL) {
   query
 }
 
-# Add a comma-separated list, kept in the caller's order.
+# Add a comma list, sorted, de-duplicated and joined by a literal ",": the
+# server's canonical form (any other is a 301).
 query_add_list <- function(query, name, values, default = NULL) {
   if (is.null(values)) {
     return(query)
   }
-  values <- check_strings(values, name)
+  values <- sort(unique(check_strings(values, name)), method = "radix")
   if (length(values) == 0L) {
     return(query)
   }
-  text <- paste(values, collapse = ",")
-  if (!is.null(default) && identical(text, default)) {
+  if (!is.null(default) && identical(paste(values, collapse = ","), default)) {
     return(query)
   }
-  query$params[[name]] <- text
-  query
-}
-
-# Add a parameter repeated once per value, sorted and de-duplicated.
-query_add_repeated <- function(query, name, values) {
-  if (is.null(values)) {
-    return(query)
-  }
-  values <- check_strings(values, name)
-  if (length(values) > 0L) {
-    query$params[[name]] <- sort(unique(values), method = "radix")
-  }
+  query$params[[name]] <- paste(vapply(values, encode_component, "", USE.NAMES = FALSE), collapse = ",")
+  query$raw <- c(query$raw, name)
   query
 }
 

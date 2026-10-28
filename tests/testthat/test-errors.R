@@ -7,7 +7,8 @@ test_that("errors map by code first, then by status", {
   expect_identical(category(403, "PRO_REQUIRED"), "permission")
   expect_identical(category(410), "not_found")
   expect_identical(category(404, "A_CODE_ADDED_LATER"), "not_found")
-  expect_identical(category(400, "FEELS_LIKE_UNAVAILABLE"), "invalid_request")
+  expect_identical(category(400, "FEELS_LIKE_UNAVAILABLE"), "invalid_request") # retired: by status
+  expect_identical(category(503, "AUTH_UNAVAILABLE"), "unavailable")
   expect_identical(category(429), "rate_limited")
   expect_identical(category(504), "unavailable")
   expect_identical(category(418), "api")
@@ -42,6 +43,27 @@ test_that("an API error carries status, code, request id, retry_after and its cl
   expect_match(conditionMessage(err), "Slow down {please}.", fixed = TRUE)
   expect_match(conditionMessage(err), "req-123", fixed = TRUE)
   expect_match(format(err), "ew_runs", fixed = TRUE)
+})
+
+test_that("an error body's request id, doc_url, param and nearest location are carried", {
+  local_quiet_client_env()
+  local_replay(list(list(
+    status = 403L,
+    headers = list(`Content-Type` = "application/json", `X-Request-Id` = "header-id"),
+    body = paste0(
+      '{"error": "PRO_REQUIRED", "message": "Pro.", "request_id": "body-id", "param": "lat",',
+      ' "doc_url": "https://docs.oureawx.com/features/errors/#pro_required",',
+      ' "nearest_location": {"slug": "mt-hood-meadows", "url": "/api/v1/locations/or/mt-hood-meadows",',
+      ' "distance_km": 4.25, "elevation_m": 1635.6}}'
+    )
+  )))
+  err <- tryCatch(ew_forecast_at(45.33, -121.67, client = ew_client(cache = FALSE)), error = identity)
+  expect_s3_class(err, "ensembleweather_error_permission")
+  expect_identical(err$request_id, "body-id")
+  expect_identical(err$doc_url, "https://docs.oureawx.com/features/errors/#pro_required")
+  expect_identical(err$param, "lat")
+  expect_identical(err$nearest_location$url, "/api/v1/locations/or/mt-hood-meadows")
+  expect_identical(err$nearest_location$distance_km, 4.25)
 })
 
 test_that("a key echoed by a server never reaches the message", {

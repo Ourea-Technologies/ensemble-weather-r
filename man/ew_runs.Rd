@@ -4,12 +4,15 @@
 \alias{ew_runs}
 \title{Model runs}
 \usage{
-ew_runs(..., limit = NULL, client = NULL)
+ew_runs(..., limit = NULL, cursor = NULL, client = NULL)
 }
 \arguments{
 \item{...}{These dots are for future extensions and must be empty.}
 
 \item{limit}{The most runs to list (at most 100; default 10).}
+
+\item{cursor}{The \code{next_cursor} attribute of the previous page; \code{NULL} for
+the first.}
 
 \item{client}{A client from \code{\link[=ew_client]{ew_client()}}; \code{NULL} uses the shared default
 client.}
@@ -17,7 +20,9 @@ client.}
 \value{
 A tibble with one row per run (\code{initialized_at}). Its \code{served}
 attribute is the run a forecast request serves now (\code{initialized_at}
-and a \code{models} tibble), or \code{NULL} when no cycle is servable.
+and a \code{models} tibble), or \code{NULL} when no cycle is servable; its
+\code{next_cursor} attribute is the cursor of the next page (\code{NULL} on the
+last).
 }
 \description{
 Lists the model runs the API can serve, newest first. Pass one of their

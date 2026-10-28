@@ -12,18 +12,17 @@ exactly what you mean with \code{\link[=tryCatch]{tryCatch()}} or \code{\link[rl
 \itemize{
 \item \code{ensembleweather_error_authentication}: \code{INVALID_API_KEY},
 \code{UNAUTHORIZED}, or HTTP 401.
-\item \code{ensembleweather_error_permission}: \code{PRO_REQUIRED}, \code{FORBIDDEN}, or
-HTTP 403.
-\item \code{ensembleweather_error_not_found}: \code{LOCATION_NOT_FOUND},
-\code{MODEL_RUN_NOT_FOUND}, \code{NOT_FOUND}, \code{GONE}, or HTTP 404 and 410.
+\item \code{ensembleweather_error_permission}: \code{PRO_REQUIRED}, or HTTP 403.
+\item \code{ensembleweather_error_not_found}: \code{LOCATION_NOT_FOUND}, \code{NOT_FOUND},
+or HTTP 404 and 410.
 \item \code{ensembleweather_error_invalid_request}: \code{BAD_REQUEST},
-\code{INVALID_COORDINATES}, \code{INVALID_ELEVATION}, \code{INVALID_MAX_HOURS},
-\code{ELEVATION_REQUIRED}, \code{AMBIGUOUS}, \code{FEELS_LIKE_UNAVAILABLE}, or HTTP 400.
-\item \code{ensembleweather_error_outside_coverage}: \code{OUTSIDE_COVERAGE} (by code
-only).
+\code{INVALID_COORDINATES}, \code{INVALID_ELEVATION}, \code{ELEVATION_REQUIRED}, or
+HTTP 400.
+\item \code{ensembleweather_error_outside_coverage}: \code{OUTSIDE_COVERAGE} (a 404;
+by code only).
 \item \code{ensembleweather_error_rate_limited}: \code{TOO_MANY_REQUESTS}, or HTTP 429.
 \item \code{ensembleweather_error_unavailable}: \code{FORECAST_UNAVAILABLE}, \code{TIMEOUT},
-\code{INTERNAL_ERROR}, \code{DATABASE_ERROR}, or HTTP 5xx.
+\code{INTERNAL_ERROR}, \code{DATABASE_ERROR}, \code{AUTH_UNAVAILABLE}, or HTTP 5xx.
 \item \code{ensembleweather_error_api}: any other HTTP error.
 \item \code{ensembleweather_error_connection}: no response at all (DNS, TLS, a
 reset, a timeout).
@@ -35,7 +34,7 @@ what the API documents, or one over 64 MiB
 }
 
 A category is chosen by the API's error code first, and by the HTTP status
-when the code is unknown or the body is not JSON.
+when the code is unknown (an older or newer one) or the body is not JSON.
 }
 \section{Fields}{
 
@@ -45,9 +44,16 @@ Errors from an HTTP response carry these fields (read them with \code{$}):
 \item \code{status}: the HTTP status;
 \item \code{code}: the API's error code, verbatim (even one this version does not
 know), or \code{NULL} when the body was not JSON;
-\item \code{request_id}: the \code{X-Request-Id} response header, if any;
-\item \code{retry_after}: for a 429 or 503, the \code{Retry-After} delay in seconds, if
-the server sent one;
+\item \code{request_id}: the request's id, for support (the error body's
+\code{request_id}, else the \code{X-Request-Id} response header);
+\item \code{doc_url}: the documentation of the error code, when the body names it;
+\item \code{param}: the query parameter a 400 is about, when the body names one;
+\item \code{nearest_location}: on a \code{PRO_REQUIRED} coordinate request, the nearest
+named location whose forecast answers without a key (a list with
+\code{slug}, \code{url}, \code{distance_km} and \code{elevation_m}), when one is within
+10 km and 300 m of elevation; else \code{NULL};
+\item \code{retry_after}: the \code{Retry-After} delay in seconds, if the server sent
+one (on 429, 503 and 504);
 \item \code{rate_limit}: the rate-limit state the response reported (see
 \code{\link[=ew_rate_limit]{ew_rate_limit()}}).
 }

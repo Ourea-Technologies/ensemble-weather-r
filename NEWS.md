@@ -1,3 +1,29 @@
+# ensembleweather (development version)
+
+* Targets the v1 contract as deployed (ensemble-weather-spec 8b85fea).
+  Breaking, as 0.x allows.
+* Storm reports are not in the public API: `ew_storm_reports()` and
+  `ew_storm_report()` are removed.
+* `precip_*` columns are `precipitation_*` (daily `total_precipitation`,
+  `precipitation_probability`, `precipitation_type`, ...; hourly
+  `precipitation_type_*`; current `precipitation_probability`; sensor
+  `precipitation_rate`).
+* Wind direction is the circular distribution: `wind_direction_mean`,
+  `_stddev` and `_sector_50_from` / `_to`, `_sector_90_from` / `_to`
+  replace its quantile columns; `wind_direction_circular_*`, `feels_like_utci*`
+  and `ptype` are gone.
+* `$probabilities` and `$window_totals` carry the server's `term` (results
+  are matched to your terms by it) and `null_reason`; window totals carry
+  `aggregation`.
+* `ew_forecast()` and `ew_forecast_at()` take `include` (`"skin_temperature"`,
+  `"mslp"`).
+* Errors follow the 16 public codes (`AUTH_UNAVAILABLE` is unavailable;
+  `OUTSIDE_COVERAGE` is a 404), carry `doc_url`, `param` and
+  `nearest_location`, and read `request_id` from the body first.
+  `Retry-After` is honoured on 504 too.
+* Comma lists are sent sorted, de-duplicated and joined by a literal `,`;
+  `capability` is one list. `ew_runs()` takes `cursor`.
+
 # ensembleweather 0.1.0
 
 * First release: the official R client for the Ourea probabilistic weather

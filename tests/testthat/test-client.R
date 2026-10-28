@@ -19,11 +19,14 @@ test_that("the forecast is tibbles of quantiles, one row per hour", {
   expect_identical(fc$hourly$temperature_p50, c(-2, -1, 0))
   expect_s3_class(fc$hourly$valid_time, "POSIXct")
   expect_identical(attr(fc$hourly$valid_time, "tzone"), "UTC")
-  # Wind direction is circular: max below min is passed through, not "fixed".
-  expect_identical(fc$hourly$wind_direction_min[[1]], 350)
-  expect_identical(fc$hourly$wind_direction_max[[1]], 20)
-  # A quantile the server did not send is absent (NA), never 0.
-  expect_true(is.na(fc$hourly$precipitation_min[[1]]))
+  # Wind direction is the circular distribution: a sector crossing north
+  # (from above to) is passed through, not "fixed".
+  expect_identical(fc$hourly$wind_direction_mean[[1]], 5)
+  expect_identical(fc$hourly$wind_direction_sector_50_from[[1]], 355)
+  expect_identical(fc$hourly$wind_direction_sector_50_to[[1]], 15)
+  expect_false("wind_direction_p50" %in% names(fc$hourly))
+  # A statistic the server did not send is absent (NA), never 0.
+  expect_true(is.na(fc$hourly$temperature_probability[[1]]))
   expect_null(fc$probabilities)
   expect_null(fc$window_totals)
   expect_identical(tibble::as_tibble(fc), fc$hourly)
@@ -205,6 +208,21 @@ test_that("a retried request keeps its If-None-Match", {
   ew_forecast("or/mt-hood-meadows", client = client)
   expect_identical(request_header(replay$requests[[2]], "If-None-Match"), "\"v1\"")
   expect_identical(request_header(replay$requests[[3]], "If-None-Match"), "\"v1\"")
+})
+
+test_that("a 504 with Retry-After waits exactly that long (BEHAVIOR 9)", {
+  local_quiet_client_env()
+  slept <- c()
+  local_mocked_bindings(sleep_for = function(s) slept <<- c(slept, s), .package = "ensembleweather")
+  local_replay(list(
+    list(
+      status = 504L, headers = list(`Content-Type` = "application/json", `Retry-After` = "5"),
+      body = '{"error": "TIMEOUT", "message": "Timed out."}'
+    ),
+    json_response(read_body("attribution.json"))
+  ))
+  ew_attribution(client = ew_client(cache = FALSE))
+  expect_identical(slept, 5)
 })
 
 test_that("the memory cache is a bounded LRU", {

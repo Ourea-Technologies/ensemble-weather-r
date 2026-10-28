@@ -36,9 +36,10 @@ ew_catalog_location(slug, ..., include = NULL, locale = NULL, client = NULL)
 
 \item{country}{Limit to one country, such as \code{"US"}.}
 
-\item{type}{Limit to one location type, such as \code{"ski_area"}.}
+\item{type}{Limit to one location type, snake_case, such as \code{"ski_area"}.}
 
-\item{template}{Limit to one page template.}
+\item{template}{Limit to one page template variant, snake_case: \code{"mountain"},
+\code{"coastal"}, \code{"trail"}, \code{"pass"}, \code{"generic"} or \code{"station"}.}
 
 \item{limit}{The page size (1 to 100; default 20).}
 
@@ -49,7 +50,7 @@ client.}
 
 \item{slug}{The location's (or station's) slug, such as \code{"mt-hood-meadows"}.}
 
-\item{include}{Optional blocks to include, such as \code{c("content", "template", "ads")}.}
+\item{include}{Optional blocks to include: \code{"content"}, \code{"template"}.}
 
 \item{locale}{The language of the content (default \code{"en"}).}
 }
@@ -58,7 +59,9 @@ client.}
 \code{ew_catalog_locations_page()}: an \code{ensembleweather_page} (a list with
 \code{items} and \code{next_cursor}). \code{ew_catalog_location()}: a list holding the
 entry, with tibbles for \code{elevations}, \code{photos}, \code{webcams},
-\code{nearby_stations}, \code{content} and \code{ads}.
+\code{nearby_stations} and \code{content}. Catalog enumerations (a station's
+\code{network} and \code{station_status}, a template's \code{template_variant} and
+\code{location_type}) are snake_case.
 }
 \description{
 The catalog describes each location and station: names, aliases,

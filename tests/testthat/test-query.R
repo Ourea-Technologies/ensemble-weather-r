@@ -27,11 +27,17 @@ test_that("the query is sorted, defaults are omitted and booleans are true/false
   q <- ensembleweather:::query_add(q, "max_hours", 24, 24)
   q <- ensembleweather:::query_add(q, "include_past", TRUE, FALSE)
   q <- ensembleweather:::query_add(q, "nowcast", TRUE, TRUE)
-  q <- ensembleweather:::query_add_repeated(q, "capability", c("swe", "snow_depth", "swe"))
+  q <- ensembleweather:::query_add_list(q, "capability", c("swe", "snow_depth", "swe"))
+  q <- ensembleweather:::query_add_list(q, "sources", c("ski resort", "gefs"))
+  q <- ensembleweather:::query_add_list(q, "feels_like", "nws", "nws")
   q <- ensembleweather:::query_add_raw(q, "prob", "snowfall:ge:6.000:24h")
+  # A comma list is sorted, de-duplicated and joined by a literal "," (else a 301).
   expect_identical(
     ensembleweather:::query_render(q),
-    "capability=snow_depth&capability=swe&include_past=true&prob=snowfall:ge:6.000:24h&units=imperial"
+    paste0(
+      "capability=snow_depth,swe&include_past=true&prob=snowfall:ge:6.000:24h",
+      "&sources=gefs,ski%20resort&units=imperial"
+    )
   )
 })
 

@@ -12,4 +12,6 @@ if (!is.null(now$current)) {
 
 alerts <- ew_alerts("or/mt-hood-meadows")
 cat(nrow(alerts), "active alerts\n")
-for (headline in alerts$headline) cat(" -", headline, "\n")
+for (i in seq_len(nrow(alerts))) {
+  cat(" -", alerts$headline[[i]], paste0("(", alerts$severity[[i]], ", ", alerts$certainty[[i]], ")"), "\n")
+}

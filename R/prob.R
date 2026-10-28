@@ -201,13 +201,22 @@ wire_window <- function(start, end) {
   if (start == 0L) paste0(end, "h") else paste0(start, "-", end, "h")
 }
 
-# The canonical `prob=` value (deduplicated, in the server's sort order) and
-# each caller term's key, in the caller's order.
+# One term's canonical spelling: what is sent, and what the server echoes as
+# the result's `term`.
+chance_wire <- function(k) {
+  text <- paste(k$variable, k$op, k$threshold, wire_window(k$start, k$end), sep = ":")
+  default <- if (k$variable %in% amount_variables) "total" else "any"
+  if (k$aggregation != default) paste0(text, ":", k$aggregation) else text
+}
+
+# The canonical `prob=` value (deduplicated, in the server's sort order), and
+# each caller term's key and canonical spelling, in the caller's order.
 prob_query <- function(chances, units) {
   keys <- lapply(chances, chance_key, units = units)
+  terms <- vapply(keys, chance_wire, "")
   unique_keys <- keys[!duplicated(vapply(keys, key_string, ""))]
   if (length(unique_keys) == 0L) {
-    return(list(wire = "", keys = keys))
+    return(list(wire = "", keys = keys, terms = terms))
   }
   field <- function(name) vapply(unique_keys, function(k) k[[name]], if (name %in% c("start", "end")) 0L else "")
   order <- order(
@@ -219,23 +228,22 @@ prob_query <- function(chances, units) {
     as.double(field("threshold")),
     method = "radix"
   )
-  wire <- vapply(unique_keys[order], function(k) {
-    text <- paste(k$variable, k$op, k$threshold, wire_window(k$start, k$end), sep = ":")
-    default <- if (k$variable %in% amount_variables) "total" else "any"
-    if (k$aggregation != default) paste0(text, ":", k$aggregation) else text
-  }, "")
-  list(wire = paste(wire, collapse = ","), keys = keys)
+  wire <- vapply(unique_keys[order], chance_wire, "")
+  list(wire = paste(wire, collapse = ","), keys = keys, terms = terms)
 }
 
 total_key <- function(total) {
   list(variable = total$variable, start = total$window[[1]], end = total$window[[2]])
 }
 
+total_wire <- function(k) paste0(k$variable, ":", wire_window(k$start, k$end))
+
 totals_query <- function(totals) {
   keys <- lapply(totals, total_key)
+  terms <- vapply(keys, total_wire, "")
   unique_keys <- keys[!duplicated(vapply(keys, key_string, ""))]
   if (length(unique_keys) == 0L) {
-    return(list(wire = "", keys = keys))
+    return(list(wire = "", keys = keys, terms = terms))
   }
   order <- order(
     vapply(unique_keys, function(k) k$variable, ""),
@@ -243,6 +251,6 @@ totals_query <- function(totals) {
     vapply(unique_keys, function(k) k$end, 0L),
     method = "radix"
   )
-  wire <- vapply(unique_keys[order], function(k) paste0(k$variable, ":", wire_window(k$start, k$end)), "")
-  list(wire = paste(wire, collapse = ","), keys = keys)
+  wire <- vapply(unique_keys[order], total_wire, "")
+  list(wire = paste(wire, collapse = ","), keys = keys, terms = terms)
 }

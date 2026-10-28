@@ -18,6 +18,9 @@ results <- c(
     )
     nrow(forecast$hourly) > 0 && nrow(forecast$probabilities) == 1 && nrow(forecast$window_totals) == 1
   }),
+  check("results echo their term; wind direction is circular", {
+    !is.na(forecast$probabilities$term[[1]]) && "wind_direction_sector_50_from" %in% names(forecast$hourly)
+  }),
   check("search finds Mt. Hood Meadows", "mt-hood-meadows" %in% ew_search("hood meadows")$slug),
   check("attribution lists providers", nrow(ew_attribution()) > 0),
   check("runs are listed", nrow(ew_runs()) > 0),

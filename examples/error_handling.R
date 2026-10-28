@@ -10,11 +10,22 @@ tryCatch(
   ensembleweather_error_permission = function(cnd) cat("needs Pro:", cnd$code, "\n")
 )
 
+# A refused coordinate request may name a nearby location that needs no key.
+tryCatch(
+  ew_forecast_at(45.33, -121.67),
+  ensembleweather_error_permission = function(cnd) {
+    near <- cnd$nearest_location
+    if (!is.null(near)) cat("try", near$url, "without a key\n")
+  },
+  ensembleweather_error = function(cnd) invisible()
+)
+
 # Every API error carries the status, the code (verbatim) and a request id.
 tryCatch(
   ew_forecast("or/no-such-place"),
   ensembleweather_error_not_found = function(cnd) {
     cat(cnd$status, cnd$code, "request id:", if (is.null(cnd$request_id)) "none" else cnd$request_id, "\n")
+    if (!is.null(cnd$doc_url)) cat("see", cnd$doc_url, "\n")
   },
   ensembleweather_error_rate_limited = function(cnd) cat("rate limited; retry after", cnd$retry_after, "s\n"),
   ensembleweather_error = function(cnd) cat("other error:", conditionMessage(cnd), "\n")

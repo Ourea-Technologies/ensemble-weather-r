@@ -8,6 +8,50 @@ are credited by GitHub handle.
 
 ## [Unreleased]
 
+Targets the v1 contract as deployed (ensemble-weather-spec 8b85fea, the
+server's public spec byte for byte). Breaking, as 0.x allows.
+
+### Changed
+
+- `precip_*` fields and columns are `precipitation_*`: daily
+  `total_precipitation`, `total_precipitation_if_wet`,
+  `precipitation_probability`, `precipitation_occurrence_probability`,
+  `precipitation_type`, `precipitation_display`; hourly
+  `precipitation_type`; current `precipitation_probability`; sensor
+  `precipitation_rate`; thresholds `daily_precipitation_*`.
+- Wind direction (hourly and `model_means`) is the circular distribution:
+  `wind_direction_mean`, `_stddev`, `_sector_50_from`/`_to`,
+  `_sector_90_from`/`_to` instead of quantile columns.
+- `$probabilities` and `$window_totals` are matched to the caller's terms by
+  the `term` the server echoes (a new first column), never by position.
+- Error categories follow the 16 public error codes: `AUTH_UNAVAILABLE` is
+  `unavailable`; `FORBIDDEN`, `GONE`, `MODEL_RUN_NOT_FOUND`, `AMBIGUOUS`,
+  `INVALID_MAX_HOURS` and `FEELS_LIKE_UNAVAILABLE` map by status.
+  `OUTSIDE_COVERAGE` is a 404. `Retry-After` is honoured on 504 too.
+- Comma lists (`sources`, `include`, `network`, `capability`, ...) are sent
+  sorted, de-duplicated and joined by a literal `,`; `capability` is one
+  list, not a repeated parameter.
+- Alert `severity`/`urgency` and the catalog's `network`, `station_status`,
+  `template_variant` and `location_type` are snake_case (as served).
+
+### Added
+
+- `include` on `ew_forecast()` / `ew_forecast_at()` (`skin_temperature`,
+  `mslp`: served only when asked for).
+- `null_reason` on probabilities and window totals; `aggregation` on window
+  totals.
+- Error fields `doc_url`, `param` and `nearest_location`; `request_id` is
+  read from the error body first.
+- Alert `certainty`; current `station_id`; `ew_runs(cursor =)` and its
+  `next_cursor` attribute.
+
+### Removed
+
+- `ew_storm_reports()` and `ew_storm_report()`: storm reports are not in the
+  public API.
+- `wind_direction_circular`, `feels_like_utci*`, `ptype`, the elevation
+  forecasts' legacy `timeseries` and `default`, and the catalog `ads` block.
+
 ## [0.1.0] - 2026-10-27
 
 ### Added

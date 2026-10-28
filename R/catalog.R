@@ -12,8 +12,9 @@
 #'
 #' @param admin1 Limit to one first-level subdivision, such as `"US-OR"`.
 #' @param country Limit to one country, such as `"US"`.
-#' @param type Limit to one location type, such as `"ski_area"`.
-#' @param template Limit to one page template.
+#' @param type Limit to one location type, snake_case, such as `"ski_area"`.
+#' @param template Limit to one page template variant, snake_case: `"mountain"`,
+#'   `"coastal"`, `"trail"`, `"pass"`, `"generic"` or `"station"`.
 #' @param limit The page size (1 to 100; default 20).
 #' @param cursor The `next_cursor` of the previous page; `NULL` for the first.
 #' @inheritParams ew_forecast
@@ -21,7 +22,9 @@
 #'   `ew_catalog_locations_page()`: an `ensembleweather_page` (a list with
 #'   `items` and `next_cursor`). `ew_catalog_location()`: a list holding the
 #'   entry, with tibbles for `elevations`, `photos`, `webcams`,
-#'   `nearby_stations`, `content` and `ads`.
+#'   `nearby_stations` and `content`. Catalog enumerations (a station's
+#'   `network` and `station_status`, a template's `template_variant` and
+#'   `location_type`) are snake_case.
 #' @seealso [ew_catalog_stations()].
 #' @export
 #' @examplesIf interactive() || nzchar(Sys.getenv("OUREA_BASE_URL"))
@@ -62,7 +65,7 @@ catalog_locations_page <- function(client, admin1, country, type, template, limi
 
 #' @rdname ew_catalog_locations
 #' @param slug The location's (or station's) slug, such as `"mt-hood-meadows"`.
-#' @param include Optional blocks to include, such as `c("content", "template", "ads")`.
+#' @param include Optional blocks to include: `"content"`, `"template"`.
 #' @param locale The language of the content (default `"en"`).
 #' @export
 ew_catalog_location <- function(slug, ..., include = NULL, locale = NULL, client = NULL) {
@@ -80,10 +83,12 @@ ew_catalog_location <- function(slug, ..., include = NULL, locale = NULL, client
 #' (an open route, sent without the API key).
 #'
 #' @inheritParams ew_catalog_locations
-#' @param network Limit to one or more networks, such as `"snotel"`.
+#' @param network Limit to one or more networks, snake_case, such as
+#'   `c("snotel", "raws")`.
 #' @param capability Limit to stations measuring every one of these, such as
-#'   `c("snow_depth", "swe")`.
-#' @param status Limit to one station status, such as `"active"`.
+#'   `c("snow_depth", "swe")` (sent as one sorted list).
+#' @param status Limit to one station status, snake_case: `"active"`,
+#'   `"intermittent"`, `"inactive"`, `"decommissioned"` or `"unknown"`.
 #' @return `ew_catalog_stations()`: a tibble with one row per station.
 #'   `ew_catalog_stations_page()`: an `ensembleweather_page`.
 #'   `ew_catalog_station()`: a list holding the entry.
@@ -115,7 +120,7 @@ catalog_stations_page <- function(client, admin1, country, network, capability, 
   query <- query_add(new_query(), "admin1", admin1)
   query <- query_add(query, "country", country)
   query <- query_add_list(query, "network", network)
-  query <- query_add_repeated(query, "capability", capability)
+  query <- query_add_list(query, "capability", capability)
   query <- query_add(query, "status", status)
   query <- query_add(query, "limit", limit, 20)
   query <- query_add(query, "cursor", cursor)

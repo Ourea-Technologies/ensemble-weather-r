@@ -32,11 +32,11 @@ probabilities <- function(spec) {
     amounts <- parts[[1]] %in% c("precipitation", "snowfall")
     hours <- window(parts[[4]])
     list(
-      variable = parts[[1]], op = parts[[2]], threshold = as.double(parts[[3]]),
+      term = term, variable = parts[[1]], op = parts[[2]], threshold = as.double(parts[[3]]),
       window_start_hours = hours[[1]], window_end_hours = hours[[2]],
       aggregation = if (length(parts) > 4L) parts[[5]] else if (amounts) "total" else "any",
       from = hours_after(hours[[1]]), to = hours_after(hours[[2]]),
-      probability = 0.42, members = 131L
+      probability = 0.42, members = 131L, null_reason = NULL
     )
   })
 }
@@ -46,18 +46,19 @@ totals <- function(spec) {
     parts <- strsplit(item, ":", fixed = TRUE)[[1]]
     hours <- window(parts[[2]])
     list(
-      variable = parts[[1]], window_start_hours = hours[[1]], window_end_hours = hours[[2]],
+      term = item, variable = parts[[1]], window_start_hours = hours[[1]],
+      window_end_hours = hours[[2]], aggregation = "total",
       from = hours_after(hours[[1]]), to = hours_after(hours[[2]]),
-      quantiles = list(mean = 31, p10 = 12, p25 = 20, p50 = 29, p75 = 40, p90 = 52),
-      members = 131L
+      quantiles = list(mean = 31, p10 = 12, p25 = 20, p50 = 29, p75 = 40, p90 = 52, min = 4, max = 88),
+      members = 131L, null_reason = NULL
     )
   })
 }
 
 alert <- function() {
   list(
-    id = "urn:oid:2.49.0.1.840.0.example", event = "Winter Storm Warning", severity = "Severe",
-    urgency = "Expected", headline = "Winter Storm Warning until Sunday 4 AM PST",
+    id = "urn:oid:2.49.0.1.840.0.example", event = "Winter Storm Warning", severity = "severe",
+    urgency = "expected", certainty = "likely", headline = "Winter Storm Warning until Sunday 4 AM PST",
     onset = start, expires = "2026-11-16T12:00:00Z"
   )
 }
@@ -69,7 +70,12 @@ forecast <- function(query) {
   out
 }
 
-error <- function(code, message) list(error = code, message = message)
+error <- function(code, message) {
+  list(
+    error = code, message = message, request_id = "01JBQ6ZK3V8M4T2N7XQH5R9W0C",
+    doc_url = paste0("https://docs.oureawx.com/features/errors/#", tolower(code))
+  )
+}
 
 route <- function(path, query, keyed) {
   location <- body("forecast-metric.json")$location
@@ -111,7 +117,7 @@ route <- function(path, query, keyed) {
       return(list(403L, body("error-pro-required.json")))
     }
     if (as.double(query$lon) > -60) {
-      return(list(400L, body("error-outside-coverage.json")))
+      return(list(404L, body("error-outside-coverage.json")))
     }
     return(list(200L, forecast(query)))
   }
@@ -130,7 +136,7 @@ route <- function(path, query, keyed) {
   if (length(parts) %in% 1:2 && parts[[1]] == "locations") {
     summary <- c(location, list(county = "Hood River"))
     state <- if (length(parts) == 2L) parts[[2]] else "all"
-    return(list(200L, list(state = state, count = 1L, locations = list(summary))))
+    return(list(200L, list(state = state, count = 1L, locations = list(summary), next_cursor = NULL)))
   }
   if (identical(parts, c("catalog", "stations"))) {
     station <- list(
@@ -143,18 +149,8 @@ route <- function(path, query, keyed) {
   if (identical(parts, "runs")) {
     return(list(200L, list(
       served = list(initialized_at = start, models = list(list(id = "ifs_ens", cycle = start))),
-      runs = list(list(initialized_at = start)), count = 1L
+      runs = list(list(initialized_at = start)), count = 1L, next_cursor = NULL
     )))
-  }
-  if (length(parts) %in% 1:2 && parts[[1]] == "storm-reports") {
-    report <- list(
-      id = 7L, location_name = "Mt. Hood Meadows", event_type = "snow", onset_time = start,
-      end_time = "2026-11-16T00:00:00Z", forecast_total_mm = 40, observed_total_mm = 44
-    )
-    if (length(parts) == 2L) {
-      return(list(200L, report))
-    }
-    return(list(200L, list(reports = list(report), count = 1L)))
   }
   if (identical(parts, "attribution")) {
     return(list(200L, body("attribution.json")))

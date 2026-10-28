@@ -12,7 +12,7 @@ totals <- forecast$window_totals
 for (i in seq_len(nrow(totals))) {
   row <- totals[i, ]
   range <- if (is.na(row$p10)) {
-    "not covered"
+    paste("no distribution:", row$null_reason)
   } else {
     sprintf("%.0f to %.0f %s (p10-p90), median %.0f", row$p10, row$p90, row$unit, row$p50)
   }

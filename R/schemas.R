@@ -15,8 +15,8 @@
 
 schemas <- list(
   ActiveAlert = c(
-    id = "chr!", event = "chr!", severity = "chr!", urgency = "chr!", headline = "chr!",
-    onset = "dttm", expires = "dttm!", ends = "dttm"
+    id = "chr!", event = "chr!", severity = "chr!", urgency = "chr!", certainty = "chr!",
+    headline = "chr!", onset = "dttm", expires = "dttm!", ends = "dttm"
   ),
   LocationRef = c(
     slug = "chr!", state = "chr!", name = "chr!", lat = "num!", lon = "num!",
@@ -25,7 +25,7 @@ schemas <- list(
   CurrentResponse = c(
     location = "LocationRef!", alerts = "ActiveAlert[]!", alerts_as_of = "dttm!",
     sensor_count = "int!", sensors = "SensorObservation[]!", current = "CurrentConditions!",
-    as_of = "dttm!", model_run_initialized_at = "dttm!", nowcast_hours = "TimeSeriesPoint[]!",
+    as_of = "dttm!", model_run_initialized_at = "dttm!", nowcast_hours = "TimeSeriesPoint[]",
     units = "chr!", attribution = "ResponseAttribution!", nowcast_unavailable = "chr[]"
   ),
   AlertsResponse = c(
@@ -35,16 +35,17 @@ schemas <- list(
   SearchLocationsResponse = c(items = "SearchHit[]!", count = "int!"),
   PublicCatalogLocationPage = c(items = "PublicCatalogLocation[]!", next_cursor = "chr!"),
   PublicCatalogStationPage = c(items = "PublicCatalogStation[]!", next_cursor = "chr!"),
-  RunsResponse = c(served = "RunsServed!", runs = "RunEntry[]!", count = "int!"),
+  RunsResponse = c(
+    served = "RunsServed!", runs = "RunEntry[]!", count = "int!", next_cursor = "chr!"
+  ),
   RunsServed = c(initialized_at = "dttm!", models = "ModelEntry[]!"),
   RunEntry = c(initialized_at = "dttm!"),
-  StormReportsResponse = c(reports = "StormReportCard[]!", count = "int!"),
   NearbyPointResponse = c(
     lat = "num!", lon = "num!", radius_km = "num!", count = "int!",
     locations = "NearbyLocation[]!"
   ),
   LocationsResponse = c(
-    state = "chr!", count = "int!", locations = "LocationSummary[]!", next_cursor = "chr"
+    state = "chr!", count = "int!", locations = "LocationSummary[]!", next_cursor = "chr!"
   ),
   NearbyLocationsResponse = c(
     location = "LocationSummary!", radius_km = "num!", count = "int!",
@@ -62,22 +63,24 @@ schemas <- list(
     description = "chr", elevations = "LocationElevation[]", distance_km = "num!"
   ),
   ProbabilityResult = c(
-    variable = "chr!", op = "chr!", threshold = "num!", window_start_hours = "int!",
-    window_end_hours = "int!", aggregation = "chr!", from = "dttm!", to = "dttm!",
-    probability = "num!", members = "int!"
+    term = "chr!", variable = "chr!", op = "chr!", threshold = "num!",
+    window_start_hours = "int!", window_end_hours = "int!", aggregation = "chr!",
+    from = "dttm!", to = "dttm!", probability = "num!", members = "int!", null_reason = "chr!"
   ),
   WindowTotal = c(
-    variable = "chr!", window_start_hours = "int!", window_end_hours = "int!",
-    from = "dttm!", to = "dttm!", quantiles = "Quantiles!", members = "int!"
+    term = "chr!", variable = "chr!", window_start_hours = "int!", window_end_hours = "int!",
+    aggregation = "chr!", from = "dttm!", to = "dttm!", quantiles = "Quantiles!",
+    members = "int!", null_reason = "chr!"
   ),
   Quantiles = c(
     mean = "num!", p10 = "num!", p25 = "num!", p50 = "num!", p75 = "num!", p90 = "num!",
-    min = "num", max = "num", probability = "num"
+    min = "num!", max = "num!", probability = "num"
   ),
+  NearestLocation = c(slug = "chr!", url = "chr!", distance_km = "num!", elevation_m = "num!"),
   PrecipDisplay = c(kind = "chr!", chance = "num!", amount = "num"),
   ProbabilityThresholds = c(
     hourly_precipitation = "num!", hourly_snowfall = "num!",
-    daily_precip_probability = "num!", daily_precip_occurrence_probability = "num!",
+    daily_precipitation_probability = "num!", daily_precipitation_occurrence_probability = "num!",
     daily_snow_probability = "num!"
   ),
   AppliedOptions = c(max_hours = "int!", max_days = "int!", clamped = "chr[]!"),
@@ -90,7 +93,9 @@ schemas <- list(
     nearest_sensors = "NearestSensor[]", point = "PointInfo", current = "CurrentConditions",
     attribution = "ResponseAttribution!"
   ),
-  GapFlow = c(status = "chr", pressure_diff_hpa = "num", wind_multiplier = "num", direction = "chr"),
+  GapFlow = c(
+    status = "chr!", pressure_diff_hpa = "num!", wind_multiplier = "num!", direction = "chr!"
+  ),
   ResponseAttribution = c(sources = "chr[]!", credit = "chr!", url = "chr!"),
   AttributionRegistry = c(providers = "AttributionProvider[]!"),
   AttributionProvider = c(
@@ -102,7 +107,7 @@ schemas <- list(
     station_id = "chr!", name = "chr!", source = "chr!", observation_time = "dttm!",
     temperature = "num", dewpoint = "num", relative_humidity = "num", wind_speed = "num",
     wind_gust = "num", wind_direction = "num", pressure = "num", precipitation = "num",
-    precip_rate = "num", reflectivity = "num", pavement_temp = "num", subsurface_temp = "num",
+    precipitation_rate = "num", reflectivity = "num", pavement_temp = "num", subsurface_temp = "num",
     visibility = "num", cloud_cover = "num", ceiling_height = "num", snow_depth = "num",
     swe = "num", swe_percent_of_median = "num", snowfall = "num", solar_radiation = "num",
     pavement_condition = "chr"
@@ -111,9 +116,9 @@ schemas <- list(
     time = "dttm!", temperature = "num!", feels_like = "num", condition = "chr!",
     condition_text = "chr!", condition_icon = "chr!", wind_speed = "num!", wind_gust = "num",
     wind_direction = "num!", relative_humidity = "num", dewpoint = "num",
-    precip_probability = "num", source = "chr!", station = "CurrentStation"
+    precipitation_probability = "num", source = "chr!", station = "CurrentStation"
   ),
-  CurrentStation = c(name = "chr!", observation_time = "dttm!"),
+  CurrentStation = c(station_id = "chr!", name = "chr!", observation_time = "dttm!"),
   PointInfo = c(
     requested_lat = "num!", requested_lon = "num!", lat = "num!", lon = "num!",
     resolution_deg = "num!", elevation = "num!", elevation_source = "chr!", state = "chr!"
@@ -132,11 +137,13 @@ schemas <- list(
     next_24h = "num!", next_48h = "num!", next_7d = "num!", overnight_4pm_9am = "num",
     quantiles = "SnowOutlookQuantiles"
   ),
-  SnowOutlookQuantiles = c(next_24h = "Quantiles", next_48h = "Quantiles", next_7d = "Quantiles"),
+  SnowOutlookQuantiles = c(
+    next_24h = "Quantiles!", next_48h = "Quantiles!", next_7d = "Quantiles!"
+  ),
   TimeSeriesPoint = c(
     valid_time = "dttm!", lead_time_hours = "int!", is_night = "lgl!", condition = "chr!",
     condition_text = "chr!", condition_icon = "chr!", gust_notable = "lgl",
-    precip_type = "PrecipType", inversion = "InversionInfo", freezing_level = "FreezingLevel",
+    precipitation_type = "PrecipType", inversion = "InversionInfo", freezing_level = "FreezingLevel",
     ensemble = "EnsembleStats!", provenance = "HourProvenance", model_means = "ModelMeansEntry[]",
     members = "ModelMembers[]", members_cumulative = "MembersCumulative",
     cumulative_precipitation = "num", cumulative_snowfall = "num"
@@ -144,12 +151,12 @@ schemas <- list(
   ModelMembers = c(id = "chr!", members = "MemberForecast[]!"),
   ModelMeansEntry = c(
     id = "chr!", temperature = "Quantiles", dewpoint = "Quantiles", precipitation = "Quantiles",
-    wind_speed = "Quantiles", wind_direction = "Quantiles", snow_level = "Quantiles",
+    wind_speed = "Quantiles", wind_direction = "CircularStats", snow_level = "Quantiles",
     slr = "Quantiles", snowfall = "Quantiles", interpolated = "lgl"
   ),
   ModelStats = c(
     temperature = "Quantiles", dewpoint = "Quantiles", precipitation = "Quantiles",
-    wind_speed = "Quantiles", wind_direction = "Quantiles", snow_level = "Quantiles",
+    wind_speed = "Quantiles", wind_direction = "CircularStats", snow_level = "Quantiles",
     slr = "Quantiles", snowfall = "Quantiles", interpolated = "lgl"
   ),
   HourProvenance = c(
@@ -163,38 +170,37 @@ schemas <- list(
   Sector = c(from = "num!", to = "num!"),
   CircularStats = c(mean = "num!", stddev = "num", sector_50 = "Sector!", sector_90 = "Sector!"),
   MemberForecast = c(
-    member_id = "int!", temperature = "num", precipitation = "num", precipitation_hours = "int",
-    wind_speed = "num", wind_direction = "num", snow_level = "num", slr = "num",
+    member_id = "int!", temperature = "num!", precipitation = "num!", precipitation_hours = "int",
+    wind_speed = "num", wind_direction = "num", snow_level = "num!", slr = "num",
     snowfall = "num", cumulative_precipitation = "num", cumulative_snowfall = "num"
   ),
   MembersCumulative = c(precipitation = "Quantiles", snowfall = "Quantiles"),
   InversionInfo = c(kind = "chr!", depth = "num!", strength = "num!"),
   PrecipType = c(type = "chr!", snow_probability = "num!", rain_probability = "num!"),
   EnsembleStats = c(
-    temperature = "Quantiles!", feels_like = "Quantiles", feels_like_utci = "Quantiles",
-    dewpoint = "Quantiles!", precipitation = "Quantiles!", wind_speed = "Quantiles!",
-    wind_gust = "Quantiles", wind_direction = "Quantiles!",
-    wind_direction_circular = "CircularStats", snow_level = "Quantiles!", slr = "Quantiles",
+    temperature = "Quantiles!", feels_like = "Quantiles", dewpoint = "Quantiles!",
+    precipitation = "Quantiles!", wind_speed = "Quantiles!", wind_gust = "Quantiles",
+    wind_direction = "CircularStats!", snow_level = "Quantiles!", slr = "Quantiles",
     snowfall = "Quantiles", cloud_cover = "Quantiles", skin_temperature = "Quantiles",
-    ptype = "Quantiles", mslp = "Quantiles", cape = "Quantiles", relative_humidity = "Quantiles"
+    mslp = "Quantiles", cape = "Quantiles", relative_humidity = "Quantiles"
   ),
   # One shape for the three FreezingLevel variants, told apart by `kind`.
   FreezingLevel = c(kind = "chr!", height = "num", above_freezing_layer_aloft = "lgl", top = "num"),
   DailyForecast = c(
     date = "date!", condition = "chr!", condition_text = "chr!", condition_icon = "chr!",
-    precip_type = "chr", high = "Quantiles!", low = "Quantiles!",
+    precipitation_type = "chr", high = "Quantiles!", low = "Quantiles!",
     feels_like_high = "Quantiles", feels_like_low = "Quantiles",
-    feels_like_utci_high = "Quantiles", feels_like_utci_low = "Quantiles",
-    total_precip = "Quantiles!", total_snowfall = "Quantiles", precip_probability = "num!",
-    precip_occurrence_probability = "num!", snow_probability = "num!", snow_level_mean = "num!",
-    snow_level = "Quantiles", total_precip_if_wet = "Quantiles",
-    total_snowfall_if_wet = "Quantiles", precip_display = "PrecipDisplay!",
+    total_precipitation = "Quantiles!", total_snowfall = "Quantiles",
+    precipitation_probability = "num!", precipitation_occurrence_probability = "num!",
+    snow_probability = "num!", snow_level_mean = "num!", snow_level = "Quantiles",
+    total_precipitation_if_wet = "Quantiles", total_snowfall_if_wet = "Quantiles",
+    precipitation_display = "PrecipDisplay!",
     cloud_cover_mean = "num", wind = "DailyWind", storm_orientation = "chr",
     storm_orientation_description = "chr", astro = "DailyAstro!",
     temperature_climatology = "DayClimatology"
   ),
   DailyWind = c(
-    status = "chr", peak_speed = "num", peak_speed_p90 = "num", is_gust = "lgl",
+    status = "chr!", peak_speed = "num!", peak_speed_p90 = "num", is_gust = "lgl!",
     sustained_speed = "num"
   ),
   DailyAstro = c(
@@ -203,21 +209,8 @@ schemas <- list(
   ),
   DayClimatology = c(mean = "num!", std = "num!"),
   ElevationForecast = c(
-    name = "chr!", elevation = "num!", default = "lgl", lat = "num!", lon = "num!",
-    timeseries = "ElevationHour[]", hourly = "TimeSeriesPoint[]", daily = "DailyForecast[]",
-    snow_outlook = "SnowOutlook"
-  ),
-  ElevationHour = c(
-    valid_time = "dttm!", lead_time_hours = "int!", temperature = "Quantiles!",
-    snow_level_delta = "Quantiles", wind_speed = "Quantiles", wind_gust = "Quantiles",
-    precipitation = "Quantiles!", condition = "chr!", condition_text = "chr!",
-    condition_icon = "chr!"
-  ),
-  StormReportCard = c(
-    id = "int64!", location_name = "chr!", event_type = "chr!", onset_time = "dttm!",
-    end_time = "dttm!", forecast_total_mm = "num!", observed_total_mm = "num!",
-    forecast_snowfall_mm = "num", observed_snowfall_mm = "num", best_model = "chr",
-    best_lead_time_hours = "int", composite_score = "num", headline = "chr"
+    name = "chr!", elevation = "num!", lat = "num!", lon = "num!",
+    hourly = "TimeSeriesPoint[]", daily = "DailyForecast[]", snow_outlook = "SnowOutlook"
   ),
   SearchHit = c(
     key = "chr!", slug = "chr!", state = "chr!", name = "chr!", lat = "num!", lon = "num!",
@@ -239,8 +232,7 @@ schemas <- list(
     best_seasons = "chr[]", key_factors = "chr[]", tags = "chr[]", external_links = "json",
     is_featured = "lgl", elevations = "PublicCatalogElevation[]!", photos = "PublicCatalogPhoto[]!",
     webcams = "PublicCatalogWebcam[]!", nearby_stations = "PublicCatalogNearbyStation[]!",
-    template = "CatalogTemplateSummary", content = "CatalogResolvedEntry[]",
-    ads = "CatalogResolvedAdSlot[]"
+    template = "CatalogTemplateSummary", content = "CatalogResolvedEntry[]"
   ),
   PublicCatalogStation = c(
     slug = "chr!", state = "chr!", name = "chr!", lat = "num!", lon = "num!",
@@ -263,7 +255,7 @@ schemas <- list(
     meta_description = "chr", tags = "chr[]", is_featured = "lgl",
     photos = "PublicCatalogPhoto[]!", webcams = "PublicCatalogWebcam[]!",
     primary_location = "PublicCatalogPrimaryLocation", template = "CatalogTemplateSummary",
-    content = "CatalogResolvedEntry[]", ads = "CatalogResolvedAdSlot[]"
+    content = "CatalogResolvedEntry[]"
   ),
   PublicCatalogPrimaryLocation = c(
     slug = "chr!", name = "chr!", lat = "num!", lon = "num!", elevation_m = "num!", type = "chr!"
@@ -285,9 +277,6 @@ schemas <- list(
     distance_km = "num", elevation_diff_m = "num", is_primary = "lgl!"
   ),
   CmsTemplateSection = c(kind = "chr!", key = "chr!", config = "json"),
-  CmsAdCreativeContent = c(
-    headline = "chr", body = "chr", cta = "chr", click_url = "chr", photo_id = "chr"
-  ),
   CatalogTemplateSummary = c(
     id = "chr!", location_type = "chr!", template_variant = "chr!",
     spec = "CmsTemplateSection[]!"
@@ -295,14 +284,6 @@ schemas <- list(
   CatalogResolvedEntry = c(
     id = "chr!", content_type_key = "chr!", title = "chr!", body = "json!", slot = "chr!",
     display_order = "int!", resolved_locale = "chr!", updated_at = "dttm!"
-  ),
-  CatalogHousePlacement = c(
-    campaign_id = "chr!", creative_id = "chr!", content = "CmsAdCreativeContent!"
-  ),
-  CatalogThirdPartyPlacement = c(unit_id = "chr!", provider = "chr!", config = "json!"),
-  CatalogResolvedAdSlot = c(
-    slot_key = "chr!", kind = "chr!", house = "CatalogHousePlacement",
-    third_party = "CatalogThirdPartyPlacement", sizes = "json!"
   )
 )
 
