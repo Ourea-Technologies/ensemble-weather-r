@@ -2,7 +2,7 @@
 % Please edit documentation in R/current.R
 \name{ew_current}
 \alias{ew_current}
-\alias{ew_current_at}
+\alias{ew_get_point_current}
 \title{Current conditions}
 \usage{
 ew_current(
@@ -15,7 +15,7 @@ ew_current(
   client = NULL
 )
 
-ew_current_at(
+ew_get_point_current(
   lat,
   lon,
   ...,
@@ -62,9 +62,9 @@ An \code{ensembleweather_current}: a list with \code{location}, \code{current}
 }
 \description{
 \code{ew_current()} gets the current conditions at a named location, and
-\code{ew_current_at()} at any coordinates (a Pro key). The conditions blend the
-nearest surface stations with the observation nowcast; the active alerts
-and the readings of nearby stations come with them.
+\code{ew_get_point_current()} at any coordinates (a Pro key). The conditions
+blend the nearest surface stations with the observation nowcast; the active
+alerts and the readings of nearby stations come with them.
 }
 \examples{
 \dontshow{if (interactive() || nzchar(Sys.getenv("OUREA_BASE_URL"))) withAutoprint(\{ # examplesIf}

@@ -17,13 +17,13 @@ vector_files <- function() {
 
 operation_functions <- c(
   getLocationForecast = "ew_forecast",
-  getPointForecast = "ew_forecast_at",
+  getPointForecast = "ew_get_point_forecast",
   getCurrentConditions = "ew_current",
-  getCurrentByCoordinates = "ew_current_at",
+  getCurrentByCoordinates = "ew_get_point_current",
   getLocationAlerts = "ew_alerts",
-  getAlertsByCoordinates = "ew_alerts_at",
+  getAlertsByCoordinates = "ew_get_point_alerts",
   getNearbyLocations = "ew_nearby",
-  getNearbyByCoordinates = "ew_nearby_at",
+  getNearbyByCoordinates = "ew_get_point_nearby",
   searchLocations = "ew_search",
   getAllLocations = "ew_locations_page",
   getLocations = "ew_locations_page",

@@ -13,6 +13,10 @@ server's public spec byte for byte). Breaking, as 0.x allows.
 
 ### Changed
 
+- The coordinate functions follow the operation ids: `ew_forecast_at()` is
+  `ew_get_point_forecast()`, `ew_current_at()` is `ew_get_point_current()`,
+  `ew_alerts_at()` is `ew_get_point_alerts()` and `ew_nearby_at()` is
+  `ew_get_point_nearby()`. There are no aliases.
 - `precip_*` fields and columns are `precipitation_*`: daily
   `total_precipitation`, `total_precipitation_if_wet`,
   `precipitation_probability`, `precipitation_occurrence_probability`,
@@ -36,8 +40,8 @@ server's public spec byte for byte). Breaking, as 0.x allows.
 
 ### Added
 
-- `include` on `ew_forecast()` / `ew_forecast_at()` (`skin_temperature`,
-  `mslp`: served only when asked for).
+- `include` on `ew_forecast()` / `ew_get_point_forecast()`
+  (`skin_temperature`, `mslp`: served only when asked for).
 - `null_reason` on probabilities and window totals; `aggregation` on window
   totals.
 - Error fields `doc_url`, `param` and `nearest_location`; `request_id` is

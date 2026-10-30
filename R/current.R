@@ -1,9 +1,9 @@
 #' Current conditions
 #'
 #' `ew_current()` gets the current conditions at a named location, and
-#' `ew_current_at()` at any coordinates (a Pro key). The conditions blend the
-#' nearest surface stations with the observation nowcast; the active alerts
-#' and the readings of nearby stations come with them.
+#' `ew_get_point_current()` at any coordinates (a Pro key). The conditions
+#' blend the nearest surface stations with the observation nowcast; the active
+#' alerts and the readings of nearby stations come with them.
 #'
 #' @inheritParams ew_forecast
 #' @param include_nowcast_hours Also return the nowcast's hourly series
@@ -36,17 +36,17 @@ ew_current <- function(location,
 }
 
 #' @rdname ew_current
-#' @inheritParams ew_forecast_at
+#' @inheritParams ew_get_point_forecast
 #' @export
-ew_current_at <- function(lat,
-                          lon,
-                          ...,
-                          elevation_m = NULL,
-                          units = NULL,
-                          sources = NULL,
-                          exclude_sources = NULL,
-                          include_nowcast_hours = FALSE,
-                          client = NULL) {
+ew_get_point_current <- function(lat,
+                                 lon,
+                                 ...,
+                                 elevation_m = NULL,
+                                 units = NULL,
+                                 sources = NULL,
+                                 exclude_sources = NULL,
+                                 include_nowcast_hours = FALSE,
+                                 client = NULL) {
   local_user_call()
   rlang::check_dots_empty()
   client <- resolve_client(client)
@@ -94,10 +94,11 @@ print.ensembleweather_current <- function(x, ...) {
 #' Active weather alerts
 #'
 #' `ew_alerts()` lists the active alerts (watches, warnings and advisories)
-#' for a named location, and `ew_alerts_at()` for any coordinates (a Pro key).
+#' for a named location, and `ew_get_point_alerts()` for any coordinates (a
+#' Pro key).
 #'
 #' @inheritParams ew_forecast
-#' @inheritParams ew_forecast_at
+#' @inheritParams ew_get_point_forecast
 #' @return A tibble with one row per alert: `id`, `event`, `severity`,
 #'   `urgency`, `headline`, `onset`, `expires` and `ends`. Its attributes
 #'   `location`, `as_of` and `attribution` hold the rest of the response.
@@ -113,7 +114,7 @@ ew_alerts <- function(location, ..., client = NULL) {
 
 #' @rdname ew_alerts
 #' @export
-ew_alerts_at <- function(lat, lon, ..., client = NULL) {
+ew_get_point_alerts <- function(lat, lon, ..., client = NULL) {
   local_user_call()
   rlang::check_dots_empty()
   client <- resolve_client(client)

@@ -41,10 +41,10 @@ ew_search <- function(q, ..., state = NULL, county = NULL, type = NULL, limit = 
 #' Nearby locations
 #'
 #' `ew_nearby()` lists the named locations near a named location, and
-#' `ew_nearby_at()` near any coordinates.
+#' `ew_get_point_nearby()` near any coordinates.
 #'
 #' @inheritParams ew_forecast
-#' @inheritParams ew_forecast_at
+#' @inheritParams ew_get_point_forecast
 #' @param limit The most locations to return (1 to 20; default 3).
 #' @param radius_km The search radius in kilometres (at most 100; default 50).
 #' @return A tibble with one row per location, nearest first, including
@@ -69,7 +69,7 @@ ew_nearby <- function(location, ..., limit = NULL, radius_km = NULL, units = NUL
 
 #' @rdname ew_nearby
 #' @export
-ew_nearby_at <- function(lat, lon, ..., limit = NULL, radius_km = NULL, units = NULL, client = NULL) {
+ew_get_point_nearby <- function(lat, lon, ..., limit = NULL, radius_km = NULL, units = NULL, client = NULL) {
   local_user_call()
   rlang::check_dots_empty()
   client <- resolve_client(client)

@@ -53,15 +53,15 @@ Pass a key to `ew_client()`, or set `OUREA_API_KEY` (for example in your
 
 ```r
 Sys.setenv(OUREA_API_KEY = "ow_...")          # or: client <- ew_client(api_key = "ow_...")
-forecast <- ew_forecast_at(45.3311, -121.6649, elevation_m = 1661)
+forecast <- ew_get_point_forecast(45.3311, -121.6649, elevation_m = 1661)
 ```
 
 - **Anonymous** (no key): forecasts, current conditions and alerts for named
   locations at the Free tier, plus search and the catalog.
 - **Free key**: the same, with your own rate-limit budget.
 - **Pro key**: the 15-day horizon, forecasts and current conditions at any
-  coordinates (`ew_forecast_at()`, `ew_current_at()`), every member's values,
-  per-model statistics and past runs.
+  coordinates (`ew_get_point_forecast()`, `ew_get_point_current()`), every
+  member's values, per-model statistics and past runs.
 
 See [pricing](https://oureawx.com/pricing). The key is sent only as
 `X-API-Key`, only to the API's own host, and never on the open routes
@@ -132,7 +132,7 @@ carry `status`, `code` (the API's string, verbatim), `request_id`, `doc_url`,
 
 ```r
 tryCatch(
-  ew_forecast_at(45.0, 10.0),
+  ew_get_point_forecast(45.0, 10.0),
   ensembleweather_error_outside_coverage = function(cnd) message(cnd$code)
 )
 ```

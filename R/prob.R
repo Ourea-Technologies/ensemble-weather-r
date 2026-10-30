@@ -6,8 +6,8 @@ max_window_hours <- 360L
 #' The chance of crossing a threshold
 #'
 #' `ew_chance()` describes one probability for [ew_forecast()] and
-#' [ew_forecast_at()] to ask for: the chance that a variable is at least (or
-#' at most) a threshold over a window of hours. The server computes it from
+#' [ew_get_point_forecast()] to ask for: the chance that a variable is at least
+#' (or at most) a threshold over a window of hours. The server computes it from
 #' the full ensemble; the package never derives a probability itself.
 #'
 #' A threshold given with a `unit` is converted exactly into the request's

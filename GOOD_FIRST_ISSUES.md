@@ -17,7 +17,7 @@ dependency).
 (writing to a temporary PNG), it is listed in the README's examples table,
 and it reads only the quantile columns (no client-side statistics).
 
-## 2. Test `ew_nearby_at()` and `ew_alerts_at()` against the stub
+## 2. Test `ew_get_point_nearby()` and `ew_get_point_alerts()` against the stub
 
 **What:** add the `/api/v1/nearby` and `/api/v1/alerts` routes to
 `scripts/stub-server.R`, and testthat cases in `tests/testthat/` that check

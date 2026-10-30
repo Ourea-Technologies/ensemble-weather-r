@@ -5,14 +5,14 @@ library(ensembleweather)
 # Coordinates outside the forecast domain (CONUS). Without a Pro key the
 # server answers PRO_REQUIRED first.
 tryCatch(
-  ew_forecast_at(45.0, 10.0),
+  ew_get_point_forecast(45.0, 10.0),
   ensembleweather_error_outside_coverage = function(cnd) cat("outside coverage:", cnd$code, "\n"),
   ensembleweather_error_permission = function(cnd) cat("needs Pro:", cnd$code, "\n")
 )
 
 # A refused coordinate request may name a nearby location that needs no key.
 tryCatch(
-  ew_forecast_at(45.33, -121.67),
+  ew_get_point_forecast(45.33, -121.67),
   ensembleweather_error_permission = function(cnd) {
     near <- cnd$nearest_location
     if (!is.null(near)) cat("try", near$url, "without a key\n")

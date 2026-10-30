@@ -57,7 +57,7 @@ test_that("an error body's request id, doc_url, param and nearest location are c
       ' "distance_km": 4.25, "elevation_m": 1635.6}}'
     )
   )))
-  err <- tryCatch(ew_forecast_at(45.33, -121.67, client = ew_client(cache = FALSE)), error = identity)
+  err <- tryCatch(ew_get_point_forecast(45.33, -121.67, client = ew_client(cache = FALSE)), error = identity)
   expect_s3_class(err, "ensembleweather_error_permission")
   expect_identical(err$request_id, "body-id")
   expect_identical(err$doc_url, "https://docs.oureawx.com/features/errors/#pro_required")

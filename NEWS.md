@@ -2,6 +2,10 @@
 
 * Targets the v1 contract as deployed (ensemble-weather-spec 8b85fea).
   Breaking, as 0.x allows.
+* The coordinate functions follow the operation ids: `ew_forecast_at()` is
+  `ew_get_point_forecast()`, `ew_current_at()` is `ew_get_point_current()`,
+  `ew_alerts_at()` is `ew_get_point_alerts()` and `ew_nearby_at()` is
+  `ew_get_point_nearby()`. There are no aliases.
 * Storm reports are not in the public API: `ew_storm_reports()` and
   `ew_storm_report()` are removed.
 * `precip_*` columns are `precipitation_*` (daily `total_precipitation`,
@@ -15,8 +19,8 @@
 * `$probabilities` and `$window_totals` carry the server's `term` (results
   are matched to your terms by it) and `null_reason`; window totals carry
   `aggregation`.
-* `ew_forecast()` and `ew_forecast_at()` take `include` (`"skin_temperature"`,
-  `"mslp"`).
+* `ew_forecast()` and `ew_get_point_forecast()` take `include`
+  (`"skin_temperature"`, `"mslp"`).
 * Errors follow the 16 public codes (`AUTH_UNAVAILABLE` is unavailable;
   `OUTSIDE_COVERAGE` is a 404), carry `doc_url`, `param` and
   `nearest_location`, and read `request_id` from the body first.

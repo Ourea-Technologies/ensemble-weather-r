@@ -38,8 +38,8 @@ An \code{ensembleweather_chance} object.
 }
 \description{
 \code{ew_chance()} describes one probability for \code{\link[=ew_forecast]{ew_forecast()}} and
-\code{\link[=ew_forecast_at]{ew_forecast_at()}} to ask for: the chance that a variable is at least (or
-at most) a threshold over a window of hours. The server computes it from
+\code{\link[=ew_get_point_forecast]{ew_get_point_forecast()}} to ask for: the chance that a variable is at least
+(or at most) a threshold over a window of hours. The server computes it from
 the full ensemble; the package never derives a probability itself.
 }
 \details{

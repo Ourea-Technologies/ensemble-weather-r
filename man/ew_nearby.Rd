@@ -2,7 +2,7 @@
 % Please edit documentation in R/locations.R
 \name{ew_nearby}
 \alias{ew_nearby}
-\alias{ew_nearby_at}
+\alias{ew_get_point_nearby}
 \title{Nearby locations}
 \usage{
 ew_nearby(
@@ -14,7 +14,7 @@ ew_nearby(
   client = NULL
 )
 
-ew_nearby_at(
+ew_get_point_nearby(
   lat,
   lon,
   ...,
@@ -51,7 +51,7 @@ A tibble with one row per location, nearest first, including
 }
 \description{
 \code{ew_nearby()} lists the named locations near a named location, and
-\code{ew_nearby_at()} near any coordinates.
+\code{ew_get_point_nearby()} near any coordinates.
 }
 \examples{
 \dontshow{if (interactive() || nzchar(Sys.getenv("OUREA_BASE_URL"))) withAutoprint(\{ # examplesIf}

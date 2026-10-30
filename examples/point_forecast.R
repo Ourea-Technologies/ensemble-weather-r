@@ -7,7 +7,7 @@ if (!nzchar(Sys.getenv("OUREA_API_KEY"))) {
   quit(status = 0)
 }
 
-forecast <- ew_forecast_at(45.3311, -121.6649, elevation_m = 1661, max_hours = 48)
+forecast <- ew_get_point_forecast(45.3311, -121.6649, elevation_m = 1661, max_hours = 48)
 hours <- forecast$hourly
 cat(sprintf("Forecast at %s (%s m), %d hours\n", forecast$location$name, forecast$location$elevation_m, nrow(hours)))
 print(hours[, c("valid_time", "temperature_p10", "temperature_p50", "temperature_p90")])

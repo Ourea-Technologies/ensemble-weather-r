@@ -1,9 +1,9 @@
 #' Ensemble forecast for a location
 #'
 #' `ew_forecast()` gets the forecast for a named location, such as
-#' `"or/mt-hood-meadows"`, and works without an API key. `ew_forecast_at()`
-#' gets it for any coordinates (and optionally an elevation), which needs a
-#' Pro key.
+#' `"or/mt-hood-meadows"`, and works without an API key.
+#' `ew_get_point_forecast()` gets it for any coordinates (and optionally an
+#' elevation), which needs a Pro key.
 #'
 #' Every value is a distribution computed by the server from the full
 #' ensemble. The hourly series has one row per hour and, for each variable,
@@ -125,28 +125,28 @@ ew_forecast <- function(location,
 #' @param elevation_m The elevation to forecast at, in metres (-500 to 9000).
 #'   `NULL` uses the terrain elevation.
 #' @export
-ew_forecast_at <- function(lat,
-                           lon,
-                           ...,
-                           elevation_m = NULL,
-                           units = NULL,
-                           prob = NULL,
-                           totals = NULL,
-                           max_hours = NULL,
-                           include_past = NULL,
-                           models = NULL,
-                           members = NULL,
-                           daily = NULL,
-                           max_days = NULL,
-                           hourly = NULL,
-                           run = NULL,
-                           sources = NULL,
-                           exclude_sources = NULL,
-                           nowcast = NULL,
-                           diagnostics = NULL,
-                           include = NULL,
-                           feels_like = NULL,
-                           client = NULL) {
+ew_get_point_forecast <- function(lat,
+                                  lon,
+                                  ...,
+                                  elevation_m = NULL,
+                                  units = NULL,
+                                  prob = NULL,
+                                  totals = NULL,
+                                  max_hours = NULL,
+                                  include_past = NULL,
+                                  models = NULL,
+                                  members = NULL,
+                                  daily = NULL,
+                                  max_days = NULL,
+                                  hourly = NULL,
+                                  run = NULL,
+                                  sources = NULL,
+                                  exclude_sources = NULL,
+                                  nowcast = NULL,
+                                  diagnostics = NULL,
+                                  include = NULL,
+                                  feels_like = NULL,
+                                  client = NULL) {
   local_user_call()
   rlang::check_dots_empty()
   client <- resolve_client(client)

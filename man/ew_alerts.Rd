@@ -2,12 +2,12 @@
 % Please edit documentation in R/current.R
 \name{ew_alerts}
 \alias{ew_alerts}
-\alias{ew_alerts_at}
+\alias{ew_get_point_alerts}
 \title{Active weather alerts}
 \usage{
 ew_alerts(location, ..., client = NULL)
 
-ew_alerts_at(lat, lon, ..., client = NULL)
+ew_get_point_alerts(lat, lon, ..., client = NULL)
 }
 \arguments{
 \item{location}{A named location: \code{"state/slug"} (for example
@@ -29,7 +29,8 @@ A tibble with one row per alert: \code{id}, \code{event}, \code{severity},
 }
 \description{
 \code{ew_alerts()} lists the active alerts (watches, warnings and advisories)
-for a named location, and \code{ew_alerts_at()} for any coordinates (a Pro key).
+for a named location, and \code{ew_get_point_alerts()} for any coordinates (a
+Pro key).
 }
 \examples{
 \dontshow{if (interactive() || nzchar(Sys.getenv("OUREA_BASE_URL"))) withAutoprint(\{ # examplesIf}

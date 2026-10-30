@@ -2,7 +2,7 @@
 % Please edit documentation in R/forecast.R
 \name{ew_forecast}
 \alias{ew_forecast}
-\alias{ew_forecast_at}
+\alias{ew_get_point_forecast}
 \title{Ensemble forecast for a location}
 \usage{
 ew_forecast(
@@ -29,7 +29,7 @@ ew_forecast(
   client = NULL
 )
 
-ew_forecast_at(
+ew_get_point_forecast(
   lat,
   lon,
   ...,
@@ -140,9 +140,9 @@ of the API's \code{ForecastResponse}, when served.
 }
 \description{
 \code{ew_forecast()} gets the forecast for a named location, such as
-\code{"or/mt-hood-meadows"}, and works without an API key. \code{ew_forecast_at()}
-gets it for any coordinates (and optionally an elevation), which needs a
-Pro key.
+\code{"or/mt-hood-meadows"}, and works without an API key.
+\code{ew_get_point_forecast()} gets it for any coordinates (and optionally an
+elevation), which needs a Pro key.
 }
 \details{
 Every value is a distribution computed by the server from the full
