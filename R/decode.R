@@ -1,11 +1,13 @@
 # Turn parsed JSON into typed R values, following `schemas`.
 #
-# * An object becomes a named list holding every field of its schema: an
+# * An object becomes a named list holding every field of its schema, under
+#   the package's names (each read from its wire name, `wire_names`): an
 #   absent scalar is a typed NA, an absent object or array is NULL. Unknown
 #   fields are ignored (BEHAVIOR 1.5). A missing required field is an error.
 # * An array of objects becomes a tibble, one row per element. Nested objects
 #   made only of scalars are flattened into `parent_child` columns
-#   (`temperature_p10`); anything else is a list-column.
+#   (`temperature_p10`); anything else is a list-column. A null element of a
+#   `<Schema>?[]` array is a row of NAs.
 # * Timestamps become POSIXct in UTC, dates become Date.
 
 scalar_types <- c("chr", "num", "int", "int64", "lgl", "dttm", "date")
@@ -21,7 +23,9 @@ parse_field <- function(spec) {
     base <- substr(base, 1L, nchar(base) - 2L)
     depth <- depth + 1L
   }
-  list(base = base, depth = depth, required = required)
+  nullable_items <- endsWith(base, "?")
+  base <- sub("[?]$", "", base)
+  list(base = base, depth = depth, required = required, nullable_items = nullable_items)
 }
 
 schema_fields <- function(schema) {
@@ -35,6 +39,10 @@ schema_fields <- function(schema) {
   }
   fields <- lapply(specs, parse_field)
   names(fields) <- names(specs)
+  wire <- wire_names[[schema]]
+  for (name in names(fields)) {
+    fields[[name]]$wire <- if (name %in% names(wire)) wire[[name]] else name
+  }
   .fields_memo[[schema]] <- fields
   fields
 }
@@ -65,16 +73,25 @@ decode_object <- function(x, schema, path = "$") {
   names(out) <- names(fields)
   for (name in names(fields)) {
     field <- fields[[name]]
-    here <- paste0(path, ".", name)
-    if (!(name %in% present)) {
+    here <- paste0(path, ".", field$wire)
+    if (!(field$wire %in% present)) {
       if (field$required) {
         decode_fail(here, "a required field is missing")
       }
       out[name] <- list(missing_value(field))
     } else {
-      out[name] <- list(decode_value(x[[name]], field, here))
+      out[name] <- list(decode_value(x[[field$wire]], field, here))
     }
   }
+  out
+}
+
+# The decoded object of a schema with every field absent: a null item of a
+# `<Schema>?[]` array.
+absent_object <- function(schema) {
+  fields <- schema_fields(schema)
+  out <- lapply(fields, missing_value)
+  names(out) <- names(fields)
   out
 }
 
@@ -108,6 +125,9 @@ decode_value <- function(value, field, path) {
     return(combine_scalars(items, field$base))
   }
   rows <- lapply(seq_along(value), function(i) {
+    if (is.null(value[[i]]) && isTRUE(field$nullable_items)) {
+      return(absent_object(field$base))
+    }
     decode_object(value[[i]], field$base, sprintf("%s[%d]", path, i - 1L))
   })
   rows_to_tibble(rows, field$base)
