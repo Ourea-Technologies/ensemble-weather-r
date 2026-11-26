@@ -16,5 +16,5 @@ for (i in seq_len(nrow(totals))) {
   } else {
     sprintf("%.0f to %.0f %s (p10-p90), median %.0f", row$p10, row$p90, row$unit, row$p50)
   }
-  cat(sprintf("%s, hours %d-%d: %s\n", row$variable, row$window_start, row$window_end, range))
+  cat(sprintf("%s, hours %d-%d: %s\n", row$variable, row$start_hours, row$end_hours, range))
 }

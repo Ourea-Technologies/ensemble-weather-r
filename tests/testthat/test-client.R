@@ -14,23 +14,111 @@ test_that("the forecast is tibbles of quantiles, one row per hour", {
   local_replay(list(metric()))
   fc <- ew_forecast("or/mt-hood-meadows", client = ew_client(cache = FALSE))
   expect_s3_class(fc, "ensembleweather_forecast")
-  expect_s3_class(fc$hourly, "tbl_df")
-  expect_identical(nrow(fc$hourly), 3L)
-  expect_identical(fc$hourly$temperature_p50, c(-2, -1, 0))
-  expect_s3_class(fc$hourly$valid_time, "POSIXct")
-  expect_identical(attr(fc$hourly$valid_time, "tzone"), "UTC")
+  hours <- fc$series$timeseries
+  expect_s3_class(hours, "tbl_df")
+  expect_identical(nrow(hours), 3L)
+  expect_identical(hours$temperature_p50, c(-2, -1, 0))
+  expect_s3_class(hours$valid_time, "POSIXct")
+  expect_identical(attr(hours$valid_time, "tzone"), "UTC")
   # Wind direction is the circular distribution: a sector crossing north
   # (from above to) is passed through, not "fixed".
-  expect_identical(fc$hourly$wind_direction_mean[[1]], 5)
-  expect_identical(fc$hourly$wind_direction_sector_50_from[[1]], 355)
-  expect_identical(fc$hourly$wind_direction_sector_50_to[[1]], 15)
-  expect_false("wind_direction_p50" %in% names(fc$hourly))
+  expect_identical(hours$wind_direction_mean[[1]], 5)
+  expect_identical(hours$wind_direction_sector_50_from[[1]], 355)
+  expect_identical(hours$wind_direction_sector_50_to[[1]], 15)
+  expect_false("wind_direction_p50" %in% names(hours))
   # A statistic the server did not send is absent (NA), never 0.
-  expect_true(is.na(fc$hourly$temperature_probability[[1]]))
+  expect_true(is.na(hours$temperature_probability[[1]]))
   expect_null(fc$probabilities)
   expect_null(fc$window_totals)
-  expect_identical(tibble::as_tibble(fc), fc$hourly)
+  expect_identical(tibble::as_tibble(fc), hours)
   expect_output(print(fc), "Mt. Hood Meadows")
+})
+
+test_that("stuttering wire names decode to the BEHAVIOR.md 3.0 names", {
+  local_quiet_client_env()
+  local_replay(list(json_response(read_body("forecast-full.json"))))
+  fc <- ew_forecast("or/mt-hood-meadows", members = TRUE, client = ew_client(cache = FALSE))
+  expect_false(any(c("forecast", "elevation_forecasts") %in% names(fc)))
+  expect_s3_class(fc$elevations, "tbl_df")
+  expect_true("height" %in% names(fc$elevations))
+  members <- fc$series$timeseries$members[[1]]
+  expect_true(all(c("id", "items") %in% names(members)))
+  expect_true("id" %in% names(members$items[[1]]))
+  expect_false("member_id" %in% names(members$items[[1]]))
+  expect_true(all(c("code", "text", "icon") %in% names(fc$current)))
+  # Fields that only look alike keep their wire names.
+  expect_true("lead_time_hours" %in% names(fc$series$timeseries))
+  expect_true("precipitation_type_type" %in% names(fc$series$timeseries))
+})
+
+test_that("members takes TRUE, FALSE or \"plume\", and plume is columns", {
+  local_quiet_client_env()
+  replay <- local_replay(list(json_response(read_body("forecast-plume.json"))))
+  fc <- ew_forecast("or/mt-hood-meadows", members = "plume", client = ew_client(cache = FALSE))
+  expect_match(replay$requests[[1]]$url, "members=plume", fixed = TRUE)
+  expect_type(fc$series$plume$headline$temperature, "double")
+  expect_output(print(fc), "plume")
+  expect_error(ew_forecast("or/mt-hood-meadows", members = "all"), class = "ensembleweather_error_usage")
+  expect_error(ew_forecast("or/mt-hood-meadows", members = NA), class = "ensembleweather_error_usage")
+})
+
+test_that("near and bbox are numbers, sent with literal commas, and checked", {
+  local_quiet_client_env()
+  replay <- local_replay(list(
+    json_response(read_body("explore.json")),
+    json_response(read_body("alert-outlines.json"))
+  ))
+  client <- ew_client(cache = FALSE)
+  ew_explore_page("snow_5d", near = list(lon = -121.66, lat = 45.33), client = client)
+  expect_match(replay$requests[[1]]$url, "near=45.33,-121.66", fixed = TRUE)
+  ew_alert_outlines(bbox = c(north = 49, east = -116, south = 41, west = -125), client = client)
+  expect_match(replay$requests[[2]]$url, "bbox=-125,41,-116,49", fixed = TRUE)
+  usage <- "ensembleweather_error_usage"
+  expect_error(ew_explore_page("snow_5d", near = "45.33,-121.66"), class = usage)
+  expect_error(ew_explore_page("snow_5d", near = c(91, 0)), class = usage)
+  expect_error(ew_explore_page("snow_5d", near = c(45, 181)), class = usage)
+  expect_error(ew_explore_page("snow_5d", near = c(45, -121), radius_km = 0), class = usage)
+  expect_error(ew_explore_page("snow_5d", near = c(45, -121), radius_km = 1001), class = usage)
+  expect_error(ew_alert_outlines(bbox = c(-116, 41, -125, 49)), class = usage)
+  expect_error(ew_alert_outlines(bbox = c(-125, 49, -116, 41)), class = usage)
+  expect_error(ew_alert_outlines(bbox = c(-125, 41, -116)), class = usage)
+  expect_error(ew_alert_outlines(bbox = c(-125, 41, -116, NA)), class = usage)
+  expect_error(ew_explore_page(metric = NULL), class = usage)
+})
+
+test_that("GeoJSON is passed through untouched", {
+  local_quiet_client_env()
+  body <- read_body("avalanche-zones.json")
+  local_replay(list(json_response(body)))
+  zones <- ew_avalanche_zones(client = ew_client(cache = FALSE))
+  expect_s3_class(zones, "ensembleweather_geojson")
+  expect_equal(unclass(zones)[names(body)], body) # the integral numbers may read back as integers
+  expect_identical(zones$features[[2]]$properties$forecast_url, body$features[[2]]$properties$forecast_url)
+  expect_output(print(zones), "FeatureCollection")
+})
+
+test_that("a snow-trend day the run has no value for is a row of NAs", {
+  local_quiet_client_env()
+  body <- read_body("snow-trend.json")
+  body$grids[[1]]$runs[[1]]$days <- c(list(NULL), body$grids[[1]]$runs[[1]]$days)
+  local_replay(list(json_response(body)))
+  trend <- ew_snow_trend("or/mt-hood-meadows", client = ew_client(cache = FALSE))
+  days <- trend$grids$runs[[1]]$days[[1]]
+  expect_identical(nrow(days), length(body$grids[[1]]$runs[[1]]$days))
+  expect_true(is.na(days$amount[[1]]))
+  expect_true(is.na(days$date[[1]]))
+})
+
+test_that("PLUS_REQUIRED is a permission error", {
+  local_quiet_client_env()
+  local_replay(list(json_response(
+    list(error = "PLUS_REQUIRED", message = "Snow trend needs Plus or Pro."),
+    status = 403L
+  )))
+  expect_error(
+    ew_snow_trend("or/mt-hood-meadows", client = ew_client(cache = FALSE)),
+    class = "ensembleweather_error_permission"
+  )
 })
 
 test_that("a present probabilities list without an answer for a term is an error", {

@@ -32,7 +32,6 @@ Useful links:
 \itemize{
   \item \url{https://docs.oureawx.com/r}
   \item \url{https://github.com/Ourea-Technologies/ensemble-weather-r}
-  \item \url{https://ourea-technologies.github.io/ensemble-weather-r/}
   \item \url{https://oureawx.com}
   \item Report bugs at \url{https://github.com/Ourea-Technologies/ensemble-weather-r/issues}
 }

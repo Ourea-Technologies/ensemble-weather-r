@@ -6,7 +6,8 @@
 #' elevation), which needs a Pro key.
 #'
 #' Every value is a distribution computed by the server from the full
-#' ensemble. The hourly series has one row per hour and, for each variable,
+#' ensemble. The hourly series (`$series$timeseries`) has one row per hour
+#' and, for each variable,
 #' the columns `<variable>_mean`, `_p10`, `_p25`, `_p50`, `_p75`, `_p90` and,
 #' `_min` and `_max`. The p50 column is the median, not "the forecast".
 #' Wind direction is the circular distribution instead: `wind_direction_mean`,
@@ -32,9 +33,14 @@
 #' @param max_hours How many hours to serve (6 to 360; default 24).
 #' @param include_past Include the hours since the run's start.
 #' @param models Include each model's own statistics (`model_means`).
-#' @param members Include every member's values (`members`), for plumes.
+#' @param members `TRUE` to include every member's values in each hour (the
+#'   `members` list-column of `$series$timeseries`); `"plume"` for the plume
+#'   view instead: the members in columns, in `$series$plume` (`headline`,
+#'   `bands`, `models`, and for Free and anonymous callers the pooled members
+#'   in `pool`), with no hourly series. `members_view` names the member set
+#'   your tier gets (`"full"` for Pro, `"pool"` for Free and anonymous).
 #' @param elevations Names of the location's elevation points to forecast too
-#'   (for example `c("base", "summit")`); see `$elevation_forecasts`.
+#'   (for example `c("base", "summit")`, or `"all"`); see `$elevations`.
 #' @param daily Include daily summaries (default `TRUE`).
 #' @param max_days How many days of daily summaries to serve (1 to 15).
 #' @param hourly Include the hourly series (default `TRUE`).
@@ -51,27 +57,38 @@
 #' @param feels_like The feels-like index (`"nws"`, the default and only one).
 #' @param client A client from [ew_client()]; `NULL` uses the shared default
 #'   client.
-#' @return An `ensembleweather_forecast`: a list with
-#'   * `location`, `model_run` (with a `models` tibble) and `units`;
-#'   * `hourly`: a tibble, one row per hour (`NULL` with `hourly = FALSE`);
-#'   * `daily`: a tibble, one row per day (`NULL` with `daily = FALSE`);
+#' @return An `ensembleweather_forecast`: the API's `ForecastResponse` as a
+#'   list, with
+#'   * `location` (with the forecast's `elevation` and the location's
+#'     `elevations`), `model_run` (with a `models` tibble) and `units`;
+#'   * `series` (JSON `forecast`): `timeseries`, a tibble with one row per
+#'     hour (`NULL` with `hourly = FALSE`, and with `members = "plume"`);
+#'     `daily`, a tibble with one row per day (`NULL` with `daily = FALSE`);
+#'     `snow_outlook`, `precipitation_outlook`, and `plume` with
+#'     `members = "plume"`;
 #'   * `probabilities`: when you asked with `prob`, a tibble with the
 #'     canonical `term` the server echoes (each answer is matched to your
 #'     term by it), the reference class of each answer (`variable`, `op`,
-#'     `threshold`, `unit`, `window_start`, `window_end`, `aggregation`,
-#'     `from`, `to`, `members`) and its `probability`, which is `NA` (never 0)
-#'     when it cannot be answered, with the reason in `null_reason`
-#'     (`"window_not_covered"`, `"too_few_members"`, `"variable_unavailable"`);
+#'     `threshold`, `unit`, `window_start_hours`, `window_end_hours`,
+#'     `aggregation`, `from`, `to`, `members`) and its `value` (JSON
+#'     `probability`), which is `NA` (never 0) when it cannot be answered,
+#'     with the reason in `null_reason` (`"window_not_covered"`,
+#'     `"too_few_members"`, `"variable_unavailable"`);
 #'   * `window_totals`: when you asked with `totals`, a tibble of each
-#'     window's `term`, `aggregation` and distribution (`mean`, `p10` ...
-#'     `p90`, `min`, `max`, all `NA` when it cannot be answered, with the
-#'     reason in `null_reason`);
-#'   * `snow_outlook`, `elevation_forecasts`, `nearest_sensors`, `point`,
-#'     `current`, `thresholds`, `applied`, `attribution` and the other fields
-#'     of the API's `ForecastResponse`, when served.
+#'     window's `term`, `start_hours` and `end_hours` (JSON
+#'     `window_start_hours`, `window_end_hours`), `aggregation`, `method` and
+#'     distribution (`mean`, `p10` ... `p90`, `min`, `max`, all `NA` when it
+#'     cannot be answered, with the reason in `null_reason`);
+#'   * `elevations` (JSON `elevation_forecasts`, each point's `height` is
+#'     JSON `elevation`), `nearest_sensors`, `point`, `current`, `avalanche`,
+#'     `snow_on_ground`, `thresholds`, `applied`, `attribution` and the other
+#'     fields of the API's `ForecastResponse`, when served.
 #'
-#'   [tibble::as_tibble()] on it gives the hourly series. Use
-#'   [ew_response_info()] and [ew_rate_limit()] for the HTTP details.
+#'   Field names are the API's, except where BEHAVIOR.md 3.0 of the spec
+#'   renames a field that repeats its holder's word; the wire name is given
+#'   next to each one here and in the README. [tibble::as_tibble()] on it
+#'   gives the hourly series. Use [ew_response_info()] and [ew_rate_limit()]
+#'   for the HTTP details.
 #' @seealso [ew_chance()], [ew_total()], [ew_current()].
 #' @export
 #' @examplesIf interactive() || nzchar(Sys.getenv("OUREA_BASE_URL"))
@@ -81,7 +98,7 @@
 #'   prob = ew_chance("snowfall", ">=", 6, "in"),
 #'   totals = ew_total("snowfall", 72)
 #' )
-#' forecast$hourly[, c("valid_time", "temperature_p10", "temperature_p90")]
+#' forecast$series$timeseries[, c("valid_time", "temperature_p10", "temperature_p90")]
 #' forecast$probabilities
 #' forecast$window_totals
 ew_forecast <- function(location,
@@ -171,8 +188,9 @@ forecast_request <- function(client, name, path, query, units, prob, totals, max
   units <- check_units(units %||% client$units)
   chances <- as_terms(prob, "ensembleweather_chance")
   wanted <- as_terms(totals, "ensembleweather_total")
+  check_members(members)
   for (arg in list(
-    list("include_past", include_past), list("models", models), list("members", members),
+    list("include_past", include_past), list("models", models),
     list("daily", daily), list("hourly", hourly), list("nowcast", nowcast)
   )) {
     check_flag(arg[[2]], arg[[1]])
@@ -204,35 +222,20 @@ forecast_request <- function(client, name, path, query, units, prob, totals, max
   with_meta(forecast, response$meta)
 }
 
+# `members` is TRUE, FALSE or "plume" (BEHAVIOR 3); any other value is
+# refused before sending.
+check_members <- function(members) {
+  if (is.null(members) || is_flag(members) || identical(members, "plume")) {
+    return(invisible(members))
+  }
+  abort_usage("{.arg members} must be {.code TRUE}, {.code FALSE} or {.val plume}.")
+}
+
 new_forecast <- function(data, units, chance_terms, total_terms) {
   body <- decode_object(data, "ForecastResponse")
-  forecast <- body$forecast
-  structure(
-    list(
-      location = body$location,
-      units = body$units,
-      model_run = body$model_run,
-      max_hours = forecast$max_hours,
-      interval_hours = forecast$interval_hours,
-      hourly = forecast$timeseries,
-      daily = forecast$daily,
-      snow_outlook = forecast$snow_outlook,
-      probabilities = answer_probabilities(body$probabilities, units, chance_terms),
-      window_totals = answer_totals(body$window_totals, units, total_terms),
-      elevation_forecasts = body$elevation_forecasts,
-      nowcast_applied = body$nowcast_applied,
-      nowcast_unavailable = body$nowcast_unavailable,
-      members_view = body$members_view,
-      gap_flow = body$gap_flow,
-      nearest_sensors = body$nearest_sensors,
-      point = body$point,
-      current = body$current,
-      thresholds = body$thresholds,
-      applied = body$applied,
-      attribution = body$attribution
-    ),
-    class = "ensembleweather_forecast"
-  )
+  body["probabilities"] <- list(answer_probabilities(body$probabilities, units, chance_terms))
+  body["window_totals"] <- list(answer_totals(body$window_totals, units, total_terms))
+  structure(body, class = "ensembleweather_forecast")
 }
 
 # Put the server's answers (in the order sent) back in the caller's order by
@@ -265,13 +268,13 @@ answer_probabilities <- function(results, units, terms) {
     op = results$op,
     threshold = results$threshold,
     unit = units_of,
-    window_start = results$window_start_hours,
-    window_end = results$window_end_hours,
+    window_start_hours = results$window_start_hours,
+    window_end_hours = results$window_end_hours,
     aggregation = results$aggregation,
     from = results$from,
     to = results$to,
     members = results$members,
-    probability = results$probability,
+    value = results$value,
     null_reason = results$null_reason
   )
 }
@@ -290,12 +293,13 @@ answer_totals <- function(results, units, terms) {
     term = results$term,
     variable = results$variable,
     unit = unit,
-    window_start = results$window_start_hours,
-    window_end = results$window_end_hours,
+    start_hours = results$start_hours,
+    end_hours = results$end_hours,
     aggregation = results$aggregation,
     from = results$from,
     to = results$to,
     members = results$members,
+    method = results$method,
     null_reason = results$null_reason,
     mean = results$quantiles_mean,
     p10 = results$quantiles_p10,
@@ -310,16 +314,19 @@ answer_totals <- function(results, units, terms) {
 
 #' @export
 format.ensembleweather_forecast <- function(x, ...) {
-  hours <- if (is.null(x$hourly)) 0L else nrow(x$hourly)
-  days <- if (is.null(x$daily)) 0L else nrow(x$daily)
+  hours <- if (is.null(x$series$timeseries)) 0L else nrow(x$series$timeseries)
+  days <- if (is.null(x$series$daily)) 0L else nrow(x$series$daily)
   lines <- c(
     paste0("<ensembleweather_forecast> ", x$location$name, " (", x$location$state, "/", x$location$slug, ")"),
     paste0(
       "  run ", format(x$model_run$initialized_at, "%Y-%m-%d %H:%M UTC"), ", ",
       x$model_run$total_members, " members, ", x$units, " units"
     ),
-    paste0("  ", hours, " hours in $hourly, ", days, " days in $daily")
+    paste0("  ", hours, " hours in $series$timeseries, ", days, " days in $series$daily")
   )
+  if (!is.null(x$series$plume)) {
+    lines <- c(lines, "  the members' plume in $series$plume")
+  }
   if (!is.null(x$probabilities)) {
     lines <- c(lines, paste0("  ", nrow(x$probabilities), " probabilities in $probabilities"))
   }
@@ -338,7 +345,7 @@ print.ensembleweather_forecast <- function(x, ...) {
 #' @importFrom tibble as_tibble
 #' @export
 as_tibble.ensembleweather_forecast <- function(x, ...) {
-  x$hourly %||% tibble::tibble()
+  x$series$timeseries %||% tibble::tibble()
 }
 
 # --- arguments shared by several operations ------------------------------------

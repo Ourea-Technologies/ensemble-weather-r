@@ -7,5 +7,6 @@ imperial <- ew_forecast("or/mt-hood-meadows", units = "imperial")
 
 cat(sprintf(
   "%s  %5.1f °C  %5.1f °F  (median)\n",
-  format(metric$hourly$valid_time, "%H:%M UTC"), metric$hourly$temperature_p50, imperial$hourly$temperature_p50
+  format(metric$series$timeseries$valid_time, "%H:%M UTC"),
+  metric$series$timeseries$temperature_p50, imperial$series$timeseries$temperature_p50
 ), sep = "")

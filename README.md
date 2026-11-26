@@ -33,14 +33,14 @@ forecast <- ew_forecast(
 )
 
 cat(forecast$location$name, "\n")
-hours <- head(forecast$hourly, 24)
+hours <- head(forecast$series$timeseries, 24)
 cat(sprintf(
   "%s  %.1f to %.1f °F (p10-p90)\n",
   format(hours$valid_time, "%a %H:%M UTC"), hours$temperature_p10, hours$temperature_p90
 ), sep = "")
 
 snow <- forecast$probabilities
-chance <- if (is.na(snow$probability)) "not available" else sprintf("%.0f%%", 100 * snow$probability)
+chance <- if (is.na(snow$value)) "not available" else sprintf("%.0f%%", 100 * snow$value)
 cat(sprintf("Chance of at least 6 in of snow in the next 24 h: %s (%d members)\n", chance, snow$members))
 ```
 
@@ -59,13 +59,15 @@ forecast <- ew_get_point_forecast(45.3311, -121.6649, elevation_m = 1661)
 - **Anonymous** (no key): forecasts, current conditions and alerts for named
   locations at the Free tier, plus search and the catalog.
 - **Free key**: the same, with your own rate-limit budget.
+- **Plus key**: adds the snow trend (`ew_snow_trend()`, each recent run's
+  daily snowfall) and the members' plume detail.
 - **Pro key**: the 15-day horizon, forecasts and current conditions at any
   coordinates (`ew_get_point_forecast()`, `ew_get_point_current()`), every
   member's values, per-model statistics and past runs.
 
 See [pricing](https://oureawx.com/pricing). The key is sent only as
 `X-API-Key`, only to the API's own host, and never on the open routes
-(search, catalog detail, attribution), so those share the edge cache with
+(search, catalog detail, attribution, composition), so those share the edge cache with
 everyone; `ew_client(send_key_on_open_routes = TRUE)` attributes every
 request to your key instead. The key never appears in printed output, logs
 or error messages.
@@ -81,8 +83,8 @@ forecast <- ew_forecast("or/mt-hood-meadows", prob = list(
   ew_chance("temperature", "<=", 32, "degF", window = c(6, 18), aggregation = "all")
 ))
 forecast$probabilities # in your order (matched by `term`): term, variable, op, threshold,
-                       # unit, window_start, window_end, aggregation, from, to, members,
-                       # probability, null_reason
+                       # unit, window_start_hours, window_end_hours, aggregation, from, to,
+                       # members, value (the probability), null_reason
 ```
 
 For a **storm total**, ask for the window total's distribution with
@@ -93,18 +95,95 @@ forecast <- ew_forecast("or/mt-hood-meadows", totals = ew_total("snowfall", 72))
 forecast$window_totals[, c("variable", "p10", "p50", "p90", "unit", "null_reason")] # NA + reason
 ```
 
-Read **quantiles** straight from the hourly tibble; `_p50` is the median,
-not "the forecast":
+Read **quantiles** straight from the hourly tibble, `$series$timeseries`;
+`_p50` is the median, not "the forecast":
 
 ```r
-forecast$hourly[, c("valid_time", "temperature_p10", "temperature_p50", "temperature_p90")]
+forecast$series$timeseries[, c("valid_time", "temperature_p10", "temperature_p50", "temperature_p90")]
 ```
+
+`members = TRUE` adds every member's values to each hour; `members = "plume"`
+serves them in columns instead (`$series$plume`), the shape a plume chart
+draws from.
 
 The package never sums, averages or interpolates quantiles, and never
 derives a probability from them: the sum of hourly medians is not the median
 total. A threshold you give in another unit is converted exactly into the
 request's units before sending; response values are never converted. More in
 [Probabilities](https://docs.oureawx.com/concepts/probabilities).
+
+## Snow, rankings and maps
+
+```r
+ew_explore("snow_5d", state = "or", type = "ski_area")  # ranked by a metric, every page
+ew_search("hood", sort = "snow_5d", near = c(45.33, -121.66)) # name matches, ranked
+ew_season("or/mt-hood-meadows")         # observed season to date, against normal
+ew_snow_trend("or/mt-hood-meadows")     # each recent run's daily snowfall (Plus or Pro)
+ew_snowpack("or/mt-hood-meadows")       # modelled snowpack and layers (beta)
+ew_snowpack_plume("or/mt-hood-meadows") # the members' snow depth (beta)
+ew_composition()                        # the models and members served now
+ew_alert_outlines(classes = "winter", bbox = c(-125, 41, -116, 49)) # GeoJSON
+ew_avalanche_zones()                    # GeoJSON, with each zone's danger rating
+```
+
+`near` and `bbox` take numbers (`c(lat, lon)`, `c(west, south, east,
+north)`), never a pre-formatted string. The two GeoJSON routes return the
+`FeatureCollection` exactly as the API sends it, for a map library.
+
+## Names that differ from the API's JSON
+
+A JSON field that repeats a word of the object holding it would read twice
+(`forecast$forecast`, `current$current`, `probability$probability`), so the
+package names it differently. There is one table for every Ourea SDK
+(ensemble-weather-spec BEHAVIOR.md 3.0), and the decoder maps the names.
+Every other field keeps its JSON name, and the GeoJSON routes are passed
+through untouched: an avalanche zone's `properties$forecast_url` stays
+`forecast_url`. In a tibble, a nested object's fields are columns named
+`<field>_<name>` (`precipitation_type_type`, `explore_value`).
+
+| Type | JSON field | R name |
+|---|---|---|
+| `ForecastResponse` | `forecast` | `series` |
+| `ForecastResponse` | `elevation_forecasts` | `elevations` |
+| `CurrentResponse` | `current` | `now` |
+| `CurrentConditions` | `condition` | `code` |
+| `CurrentConditions` | `condition_text` | `text` |
+| `CurrentConditions` | `condition_icon` | `icon` |
+| `CurrentConditions.station` | `station_id` | `id` |
+| `ProbabilityResult` | `probability` | `value` |
+| `ProbabilityThresholds` | `daily_precipitation_probability` | `daily_precipitation` |
+| `ProbabilityThresholds` | `daily_precipitation_occurrence_probability` | `daily_precipitation_occurrence` |
+| `ProbabilityThresholds` | `daily_snow_probability` | `daily_snow` |
+| `WindowTotal` | `window_start_hours` | `start_hours` |
+| `WindowTotal` | `window_end_hours` | `end_hours` |
+| `TimeSeriesPoint.members[]` | `members` | `items` |
+| `MemberForecast` | `member_id` | `id` |
+| `MemberPlume` | `members` | `pool` |
+| `AlertsResponse` | `alerts` | `items` |
+| `AlertsResponse` | `alert_count` | `count` |
+| `LocationsResponse` | `locations` | `items` |
+| `NearbyLocationsResponse` | `location` | `origin` |
+| `NearbyLocationsResponse` | `locations` | `items` |
+| `NearbyPointResponse` | `locations` | `items` |
+| `RunsResponse` | `runs` | `items` |
+| `ElevationForecast` | `elevation` | `height` |
+| `ElevationSummary` | `elevation` | `height` |
+| `SnowTrendResponse.elevation` | `elevation` | `height` |
+| `PublicCatalogElevation` | `elevation_m` | `height_m` |
+| `PublicCatalogStation` | `source_station_id` | `source_id` |
+| `PublicCatalogStation` | `station_status` | `status` |
+| `PublicCatalogStation` | `station_url` | `url` |
+| `PublicCatalogNearbyStation` | `station_status` | `status` |
+| `CatalogTemplateSummary` | `template_variant` | `variant` |
+| `CatalogResolvedEntry` | `resolved_locale` | `locale` |
+| `SensorObservation` | `observation_time` | `observed_at` |
+| `PassHour` | `snow_level_above_pass` | `snow_level_margin` |
+| `PassStatusSegment` | `status` | `state` |
+| `PassStatusSegment` | `status_text` | `text` |
+| `AvalancheForecast` | `forecast_url` | `url` |
+| `SeasonTotal` | `total` | `amount` |
+| `SnowTrendDay` | `snow` | `amount` |
+| `ErrorResponse` | `error` | the error condition's `code` |
 
 ## More examples
 
@@ -118,6 +197,7 @@ request's units before sending; response values are never converted. More in
 | [`current_and_alerts.R`](examples/current_and_alerts.R) | current conditions and active alerts for a location |
 | [`error_handling.R`](examples/error_handling.R) | catching an out-of-coverage error by its class, the keyless alternative to `PRO_REQUIRED`; reading rate-limit state |
 | [`units.R`](examples/units.R) | the same forecast in metric and imperial |
+| [`explore_and_season.R`](examples/explore_and_season.R) | ski areas ranked by the next 5 days' snow, then the leader's season to date |
 
 ## Errors, retries and rate limits
 
@@ -153,8 +233,7 @@ revalidated on every call, so an unchanged forecast costs a `304`. Use
 
 - Guides: https://docs.oureawx.com
 - This SDK's guide: https://docs.oureawx.com/r
-- API reference: the help pages (`?ew_forecast`), also on the
-  [pkgdown site](https://ourea-technologies.github.io/ensemble-weather-r/)
+- API reference: the help pages (`?ew_forecast`)
 - The OpenAPI contract: [ensemble-weather-spec](https://github.com/Ourea-Technologies/ensemble-weather-spec/blob/main/openapi/v1/openapi.yaml)
   (a pinned copy is in [`spec/`](spec/))
 - Citing: `citation("ensembleweather")`
@@ -175,7 +254,7 @@ including small ones.
 
 - **Report a bug**: open a [bug report](https://github.com/Ourea-Technologies/ensemble-weather-r/issues/new?template=bug_report.yml).
 - **Request a feature** or an API capability: open a [feature request](https://github.com/Ourea-Technologies/ensemble-weather-r/issues/new?template=feature_request.yml).
-- **Ask a question or share what you built**: [GitHub Discussions](https://github.com/Ourea-Technologies/ensemble-weather-r/discussions).
+- **Ask a question or share what you built**: open an [issue](https://github.com/Ourea-Technologies/ensemble-weather-r/issues).
 - **Contribute code or docs**: read [CONTRIBUTING.md](.github/CONTRIBUTING.md) and look for
   [`good first issue`](https://github.com/Ourea-Technologies/ensemble-weather-r/labels/good%20first%20issue)s.
 - **Security issues**: never in public issues; see [SECURITY.md](SECURITY.md).

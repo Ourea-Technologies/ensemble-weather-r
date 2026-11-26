@@ -11,6 +11,11 @@ ew_search(
   county = NULL,
   type = NULL,
   limit = NULL,
+  sort = NULL,
+  order = NULL,
+  near = NULL,
+  radius_km = NULL,
+  units = NULL,
   client = NULL
 )
 }
@@ -27,23 +32,50 @@ ew_search(
 
 \item{limit}{The most results to return (1 to 100; default 20).}
 
+\item{sort}{\code{"relevance"} (the default) or an explore metric, such as
+\code{"snow_5d"}.}
+
+\item{order}{With a metric \code{sort}: \code{"desc"} (the default) or \code{"asc"}.}
+
+\item{near}{Only places within \code{radius_km} of a point: \code{c(lat, lon)}, or a
+list or vector named \code{lat} and \code{lon}. Sent as \verb{lat,lon}, each number as
+given.}
+
+\item{radius_km}{With \code{near}: the radius in kilometres (up to 1000;
+default 100).}
+
+\item{units}{With a metric \code{sort}, the unit system of each hit's
+\code{explore_value}. \code{NULL} uses the client's units.}
+
 \item{client}{A client from \code{\link[=ew_client]{ew_client()}}; \code{NULL} uses the shared default
 client.}
 }
 \value{
-A tibble with one row per hit: \code{key} (\code{"state/slug"}), \code{slug},
-\code{state}, \code{name}, \code{lat}, \code{lon}, \code{elevation_m}, \code{type}, \code{timezone} and
-\code{county}. A row can be passed straight to \code{\link[=ew_forecast]{ew_forecast()}}.
+A tibble with one row per hit: \code{key} (such as
+\code{"or-mt-hood-meadows"}), \code{slug}, \code{state}, \code{name}, \code{lat}, \code{lon},
+\code{elevation_m}, \code{type}, \code{timezone} and \code{county}, and with a metric
+\code{sort} the \code{explore_metric}, \code{explore_value}, \code{explore_unit},
+\code{explore_p10}, \code{explore_p90}, \code{explore_as_of}, \code{explore_initialized_at}
+and \code{explore_source} columns. A row can be passed straight to
+\code{\link[=ew_forecast]{ew_forecast()}}.
 }
 \description{
 Finds named locations by name, for example \code{"hood meadows"} or
 \code{"boston ma"}. Search is an open route: it is sent without the API key, so
 the answer can come from the API's shared edge cache.
 }
+\details{
+With \code{sort} set to an explore metric (see \code{\link[=ew_explore]{ew_explore()}}), up to 100 name
+matches are ranked by it, and each hit carries that metric's value in the
+\verb{explore_*} columns (\code{NA} on a hit without one).
+}
 \examples{
 \dontshow{if (interactive() || nzchar(Sys.getenv("OUREA_BASE_URL"))) withAutoprint(\{ # examplesIf}
 hits <- ew_search("hood meadows")
 hits
 ew_forecast(hits[1, ])
+
+# The deepest new snow among name matches near Mt. Hood.
+ew_search("mt", sort = "snow_5d", near = c(45.33, -121.66), radius_km = 50)
 \dontshow{\}) # examplesIf}
 }

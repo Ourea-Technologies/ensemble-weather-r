@@ -50,7 +50,7 @@ totals <- function(spec) {
       window_end_hours = hours[[2]], aggregation = "total",
       from = hours_after(hours[[1]]), to = hours_after(hours[[2]]),
       quantiles = list(mean = 31, p10 = 12, p25 = 20, p50 = 29, p75 = 40, p90 = 52, min = 4, max = 88),
-      members = 131L, null_reason = NULL
+      members = 131L, method = "members", null_reason = NULL
     )
   })
 }
@@ -95,7 +95,8 @@ route <- function(path, query, keyed) {
       units = "metric", attribution = attribution,
       current = list(
         time = start, temperature = -2, condition = "snow", condition_text = "Snow",
-        condition_icon = "night_snow", wind_speed = 6, wind_direction = 5, source = "nowcast"
+        condition_icon = "night_snow", wind_speed = 6, wind_direction = 5, measured = FALSE,
+        source = "nowcast"
       )
     )))
   }
@@ -104,6 +105,15 @@ route <- function(path, query, keyed) {
       location = location, alert_count = 1L, as_of = start, alerts = list(alert()),
       attribution = attribution
     )))
+  }
+  subroutes <- c(
+    season = "season.json", `snow-trend` = "snow-trend.json", snowpack = "snowpack.json"
+  )
+  if (length(parts) == 4L && parts[[1]] == "locations" && parts[[4]] %in% names(subroutes)) {
+    return(list(200L, body(subroutes[[parts[[4]]]])))
+  }
+  if (length(parts) == 5L && parts[[1]] == "locations" && identical(parts[4:5], c("snowpack", "plume"))) {
+    return(list(200L, body("snowpack-plume.json")))
   }
   if (length(parts) == 4L && parts[[1]] == "locations" && parts[[4]] == "nearby") {
     summary <- c(location, list(county = "Hood River"))
@@ -122,7 +132,21 @@ route <- function(path, query, keyed) {
     return(list(200L, forecast(query)))
   }
   if (identical(parts, c("search", "locations"))) {
-    return(list(200L, body("search.json")))
+    return(list(200L, body(if (is.null(query$sort)) "search.json" else "search-sorted.json")))
+  }
+  if (identical(parts, "explore")) {
+    out <- body("explore.json")
+    if (!is.null(query$cursor)) out$next_cursor <- NULL # a second page is the last
+    return(list(200L, out))
+  }
+  if (identical(parts, "composition")) {
+    return(list(200L, body("composition.json")))
+  }
+  if (identical(parts, c("alerts", "outlines"))) {
+    return(list(200L, body("alert-outlines.json")))
+  }
+  if (identical(parts, c("avalanche", "zones"))) {
+    return(list(200L, body("avalanche-zones.json")))
   }
   if (identical(parts, c("catalog", "locations"))) {
     return(list(200L, body(if (is.null(query$cursor)) "catalog-page-1.json" else "catalog-page-2.json")))

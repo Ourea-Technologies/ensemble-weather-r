@@ -23,8 +23,11 @@
 #'   `items` and `next_cursor`). `ew_catalog_location()`: a list holding the
 #'   entry, with tibbles for `elevations`, `photos`, `webcams`,
 #'   `nearby_stations` and `content`. Catalog enumerations (a station's
-#'   `network` and `station_status`, a template's `template_variant` and
-#'   `location_type`) are snake_case.
+#'   `network` and `status`, a template's `variant` and `location_type`) are
+#'   snake_case. Renamed from the wire (BEHAVIOR.md 3.0): an elevation's
+#'   `height_m` (JSON `elevation_m`), a nearby station's `status` (JSON
+#'   `station_status`), the template's `variant` (JSON `template_variant`)
+#'   and a content entry's `locale` (JSON `resolved_locale`).
 #' @seealso [ew_catalog_stations()].
 #' @export
 #' @examplesIf interactive() || nzchar(Sys.getenv("OUREA_BASE_URL"))
@@ -91,7 +94,9 @@ ew_catalog_location <- function(slug, ..., include = NULL, locale = NULL, client
 #'   `"intermittent"`, `"inactive"`, `"decommissioned"` or `"unknown"`.
 #' @return `ew_catalog_stations()`: a tibble with one row per station.
 #'   `ew_catalog_stations_page()`: an `ensembleweather_page`.
-#'   `ew_catalog_station()`: a list holding the entry.
+#'   `ew_catalog_station()`: a list holding the entry. A station's
+#'   `source_id`, `status` and `url` are JSON `source_station_id`,
+#'   `station_status` and `station_url` (BEHAVIOR.md 3.0).
 #' @export
 #' @examplesIf interactive() || nzchar(Sys.getenv("OUREA_BASE_URL"))
 #' snotel <- ew_catalog_stations(network = "snotel", admin1 = "US-OR")

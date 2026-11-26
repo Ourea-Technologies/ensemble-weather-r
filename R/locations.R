@@ -4,21 +4,43 @@
 #' `"boston ma"`. Search is an open route: it is sent without the API key, so
 #' the answer can come from the API's shared edge cache.
 #'
+#' With `sort` set to an explore metric (see [ew_explore()]), up to 100 name
+#' matches are ranked by it, and each hit carries that metric's value in the
+#' `explore_*` columns (`NA` on a hit without one).
+#'
 #' @param q The text to search for (at least 2 characters).
 #' @inheritParams ew_forecast
 #' @param state Limit to one state (USPS code, such as `"or"`).
 #' @param county Limit to one county.
 #' @param type Limit to one location type, such as `"ski_area"`.
 #' @param limit The most results to return (1 to 100; default 20).
-#' @return A tibble with one row per hit: `key` (`"state/slug"`), `slug`,
-#'   `state`, `name`, `lat`, `lon`, `elevation_m`, `type`, `timezone` and
-#'   `county`. A row can be passed straight to [ew_forecast()].
+#' @param sort `"relevance"` (the default) or an explore metric, such as
+#'   `"snow_5d"`.
+#' @param order With a metric `sort`: `"desc"` (the default) or `"asc"`.
+#' @param near Only places within `radius_km` of a point: `c(lat, lon)`, or a
+#'   list or vector named `lat` and `lon`. Sent as `lat,lon`, each number as
+#'   given.
+#' @param radius_km With `near`: the radius in kilometres (up to 1000;
+#'   default 100).
+#' @param units With a metric `sort`, the unit system of each hit's
+#'   `explore_value`. `NULL` uses the client's units.
+#' @return A tibble with one row per hit: `key` (such as
+#'   `"or-mt-hood-meadows"`), `slug`, `state`, `name`, `lat`, `lon`,
+#'   `elevation_m`, `type`, `timezone` and `county`, and with a metric
+#'   `sort` the `explore_metric`, `explore_value`, `explore_unit`,
+#'   `explore_p10`, `explore_p90`, `explore_as_of`, `explore_initialized_at`
+#'   and `explore_source` columns. A row can be passed straight to
+#'   [ew_forecast()].
 #' @export
 #' @examplesIf interactive() || nzchar(Sys.getenv("OUREA_BASE_URL"))
 #' hits <- ew_search("hood meadows")
 #' hits
 #' ew_forecast(hits[1, ])
-ew_search <- function(q, ..., state = NULL, county = NULL, type = NULL, limit = NULL, client = NULL) {
+#'
+#' # The deepest new snow among name matches near Mt. Hood.
+#' ew_search("mt", sort = "snow_5d", near = c(45.33, -121.66), radius_km = 50)
+ew_search <- function(q, ..., state = NULL, county = NULL, type = NULL, limit = NULL, sort = NULL,
+                      order = NULL, near = NULL, radius_km = NULL, units = NULL, client = NULL) {
   local_user_call()
   rlang::check_dots_empty()
   client <- resolve_client(client)
@@ -32,6 +54,10 @@ ew_search <- function(q, ..., state = NULL, county = NULL, type = NULL, limit = 
   query <- query_add(query, "county", county)
   query <- query_add(query, "type", type)
   query <- query_add(query, "limit", limit, 20)
+  query <- query_add(query, "sort", optional_string(sort, "sort"), "relevance")
+  query <- query_add(query, "order", optional_string(order, "order"), "desc")
+  query <- query_add_near(query, near, radius_km)
+  query <- query_add(query, "units", check_units(units %||% client$units), "metric")
   operation <- new_operation("searchLocations", "/api/v1/search/locations", query, open_route = TRUE)
   response <- perform(client, operation)
   body <- decode_object(response$data, "SearchLocationsResponse")
@@ -47,9 +73,11 @@ ew_search <- function(q, ..., state = NULL, county = NULL, type = NULL, limit = 
 #' @inheritParams ew_get_point_forecast
 #' @param limit The most locations to return (1 to 20; default 3).
 #' @param radius_km The search radius in kilometres (at most 100; default 50).
-#' @return A tibble with one row per location, nearest first, including
-#'   `distance_km`. Its attributes hold the rest of the response: `origin`
-#'   (the location searched around) or `lat`/`lon`, and `radius_km`.
+#' @return A tibble with one row per location (JSON `locations`), nearest
+#'   first, including `distance_km`; an elevation point's `height` is JSON
+#'   `elevation`. Its attributes hold the rest of the response: `origin` (JSON
+#'   `location`, the location searched around) or `lat`/`lon`, and
+#'   `radius_km`.
 #' @export
 #' @examplesIf interactive() || nzchar(Sys.getenv("OUREA_BASE_URL"))
 #' ew_nearby("or/mt-hood-meadows", limit = 5)
@@ -61,8 +89,8 @@ ew_nearby <- function(location, ..., limit = NULL, radius_km = NULL, units = NUL
   operation <- new_operation("getNearbyLocations", location_path(location, "/nearby"), query)
   response <- perform(client, operation)
   body <- decode_object(response$data, "NearbyLocationsResponse")
-  locations <- body$locations
-  attr(locations, "origin") <- body$location
+  locations <- body$items
+  attr(locations, "origin") <- body$origin
   attr(locations, "radius_km") <- body$radius_km
   with_meta(locations, response$meta)
 }
@@ -76,7 +104,7 @@ ew_get_point_nearby <- function(lat, lon, ..., limit = NULL, radius_km = NULL, u
   query <- nearby_query(coordinates_query(lat, lon), limit, radius_km, units %||% client$units)
   response <- perform(client, new_operation("getNearbyByCoordinates", "/api/v1/nearby", query))
   body <- decode_object(response$data, "NearbyPointResponse")
-  locations <- body$locations
+  locations <- body$items
   attr(locations, "lat") <- body$lat
   attr(locations, "lon") <- body$lon
   attr(locations, "radius_km") <- body$radius_km
@@ -148,14 +176,17 @@ locations_page <- function(client, state, type, units, limit, cursor) {
   }
   response <- perform(client, operation)
   body <- decode_object(response$data, "LocationsResponse")
-  new_page(body$locations, body$next_cursor, response$meta)
+  new_page(body$items, body$next_cursor, response$meta)
 }
 
-new_page <- function(items, next_cursor, meta) {
+# One page: `items` and `next_cursor` (NULL on the last page), plus any
+# other fields of the page's response.
+new_page <- function(items, next_cursor, meta, ...) {
   if (!is.null(next_cursor) && (is.na(next_cursor) || !nzchar(next_cursor))) {
     next_cursor <- NULL
   }
-  with_meta(structure(list(items = items, next_cursor = next_cursor), class = "ensembleweather_page"), meta)
+  page <- c(list(items = items, next_cursor = next_cursor), list(...))
+  with_meta(structure(page, class = "ensembleweather_page"), meta)
 }
 
 # Follow next_cursor until it is null, binding the pages' rows together.

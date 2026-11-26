@@ -23,7 +23,7 @@ default_max_retries <- 2L
 #' appears in printed output, logs or error messages.
 #'
 #' The open routes ([ew_search()], [ew_catalog_location()],
-#' [ew_catalog_station()] and [ew_attribution()]) are sent **without** the
+#' [ew_catalog_station()], [ew_attribution()] and [ew_composition()]) are sent **without** the
 #' key even when the client has one, so every caller shares one entry in the
 #' API's edge cache. Set `send_key_on_open_routes = TRUE` to attribute every
 #' request to your key instead.

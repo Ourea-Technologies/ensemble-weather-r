@@ -18,7 +18,8 @@ the first.}
 client.}
 }
 \value{
-A tibble with one row per run (\code{initialized_at}). Its \code{served}
+A tibble with one row per run (\code{initialized_at}; JSON \code{runs}). Its
+\code{served}
 attribute is the run a forecast request serves now (\code{initialized_at}
 and a \code{models} tibble), or \code{NULL} when no cycle is servable; its
 \code{next_cursor} attribute is the cursor of the next page (\code{NULL} on the

@@ -6,7 +6,8 @@
 #'
 #' * `ensembleweather_error_authentication`: `INVALID_API_KEY`,
 #'   `UNAUTHORIZED`, or HTTP 401.
-#' * `ensembleweather_error_permission`: `PRO_REQUIRED`, or HTTP 403.
+#' * `ensembleweather_error_permission`: `PRO_REQUIRED`, `PLUS_REQUIRED`
+#'   (a Plus or Pro route, such as [ew_snow_trend()]), or HTTP 403.
 #' * `ensembleweather_error_not_found`: `LOCATION_NOT_FOUND`, `NOT_FOUND`,
 #'   or HTTP 404 and 410.
 #' * `ensembleweather_error_invalid_request`: `BAD_REQUEST`,
@@ -73,7 +74,7 @@ NULL
 # Error codes per category (BEHAVIOR 8).
 error_codes <- list(
   authentication = c("INVALID_API_KEY", "UNAUTHORIZED"),
-  permission = "PRO_REQUIRED",
+  permission = c("PRO_REQUIRED", "PLUS_REQUIRED"),
   not_found = c("LOCATION_NOT_FOUND", "NOT_FOUND"),
   invalid_request = c(
     "BAD_REQUEST", "INVALID_COORDINATES", "INVALID_ELEVATION", "ELEVATION_REQUIRED"

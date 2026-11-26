@@ -12,4 +12,4 @@ terms <- list(
 forecast <- ew_forecast("or/mt-hood-meadows", units = "imperial", prob = terms)
 
 p <- forecast$probabilities
-print(p[, c("variable", "op", "threshold", "unit", "window_start", "window_end", "members", "probability")])
+print(p[, c("variable", "op", "threshold", "unit", "window_start_hours", "window_end_hours", "members", "value")])

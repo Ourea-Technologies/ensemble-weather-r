@@ -63,7 +63,9 @@ client.}
 \value{
 \code{ew_catalog_stations()}: a tibble with one row per station.
 \code{ew_catalog_stations_page()}: an \code{ensembleweather_page}.
-\code{ew_catalog_station()}: a list holding the entry.
+\code{ew_catalog_station()}: a list holding the entry. A station's
+\code{source_id}, \code{status} and \code{url} are JSON \code{source_station_id},
+\code{station_status} and \code{station_url} (BEHAVIOR.md 3.0).
 }
 \description{
 \code{ew_catalog_stations()} lists the observation stations in the catalog,

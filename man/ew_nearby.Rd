@@ -45,9 +45,11 @@ client.}
 given.}
 }
 \value{
-A tibble with one row per location, nearest first, including
-\code{distance_km}. Its attributes hold the rest of the response: \code{origin}
-(the location searched around) or \code{lat}/\code{lon}, and \code{radius_km}.
+A tibble with one row per location (JSON \code{locations}), nearest
+first, including \code{distance_km}; an elevation point's \code{height} is JSON
+\code{elevation}. Its attributes hold the rest of the response: \code{origin} (JSON
+\code{location}, the location searched around) or \code{lat}/\code{lon}, and
+\code{radius_km}.
 }
 \description{
 \code{ew_nearby()} lists the named locations near a named location, and
