@@ -27,6 +27,10 @@ jobs:
           needs: lint
       - name: styler (tidyverse style, no changes)
         run: Rscript -e 'styler::style_pkg(dry = "fail"); styler::style_dir("examples", dry = "fail"); styler::style_dir("scripts", dry = "fail")'
+      # lintr's object_usage_linter reads the installed package, and the
+      # dependency cache can hold an older build of it.
+      - name: Install this package
+        run: R CMD INSTALL .
       - name: lintr
         run: |
           Rscript -e 'l <- c(lintr::lint_package(), lintr::lint_dir("examples"), lintr::lint_dir("scripts")); print(l); if (length(l)) quit(status = 1)'
@@ -72,6 +76,10 @@ jobs:
       # One job also builds and checks the PDF manual, as CRAN does.
       - if: matrix.config.manual
         uses: r-lib/actions/setup-tinytex@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
+      # The HTML manual check validates with HTML Tidy, as CRAN does; without
+      # it R CMD check leaves a NOTE.
+      - if: matrix.config.manual
+        run: sudo apt-get update && sudo apt-get install -y tidy
       - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2.14.0
         with:
           extra-packages: any::rcmdcheck

@@ -63,17 +63,18 @@ ew_explore <- function(metric,
   local_user_call()
   rlang::check_dots_empty()
   client <- resolve_client(client)
-  first <- NULL
+  # The ranking's description, from the first page.
+  ranking <- new.env(parent = emptyenv())
   items <- collect_pages(function(cursor) {
     page <- explore_page(
       client, metric, order, type, state, near, radius_km, elevation_min, elevation_max,
       points, limit, cursor, units
     )
-    first <<- first %||% page
+    if (is.null(ranking$first)) ranking$first <- page
     page
   })
   for (name in c("metric", "order", "units", "unit")) {
-    attr(items, name) <- first[[name]]
+    attr(items, name) <- ranking$first[[name]]
   }
   items
 }
