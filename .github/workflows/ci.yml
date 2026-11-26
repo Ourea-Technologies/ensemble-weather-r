@@ -142,10 +142,11 @@ jobs:
         with:
           extra-packages: any::pkgdown, local::.
           needs: website
+      # No check_pkgdown(): it requires a deployed site URL in DESCRIPTION, and
+      # the site is not published yet (CRAN refuses a URL that 404s). A
+      # missing reference topic still fails the build.
       - name: Build the site (examples run against the local stub; warnings fail)
-        run: |
-          Rscript -e 'pkgdown::check_pkgdown()'
-          Rscript scripts/build-site.R docs
+        run: Rscript scripts/build-site.R docs
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: pkgdown-site
