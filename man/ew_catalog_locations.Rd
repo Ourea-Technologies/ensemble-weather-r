@@ -60,8 +60,11 @@ client.}
 \code{items} and \code{next_cursor}). \code{ew_catalog_location()}: a list holding the
 entry, with tibbles for \code{elevations}, \code{photos}, \code{webcams},
 \code{nearby_stations} and \code{content}. Catalog enumerations (a station's
-\code{network} and \code{station_status}, a template's \code{template_variant} and
-\code{location_type}) are snake_case.
+\code{network} and \code{status}, a template's \code{variant} and \code{location_type}) are
+snake_case. Renamed from the wire (BEHAVIOR.md 3.0): an elevation's
+\code{height_m} (JSON \code{elevation_m}), a nearby station's \code{status} (JSON
+\code{station_status}), the template's \code{variant} (JSON \code{template_variant})
+and a content entry's \code{locale} (JSON \code{resolved_locale}).
 }
 \description{
 The catalog describes each location and station: names, aliases,

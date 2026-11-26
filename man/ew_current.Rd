@@ -53,10 +53,16 @@ given.}
 \code{NULL} uses the terrain elevation.}
 }
 \value{
-An \code{ensembleweather_current}: a list with \code{location}, \code{current}
-(the conditions, or \code{NULL} when none are available), \code{alerts} and
-\code{sensors} (tibbles), \code{nowcast_hours} (a tibble shaped like a forecast's
-\verb{$hourly}, or \code{NULL}), \code{as_of}, \code{alerts_as_of},
+An \code{ensembleweather_current}: the API's \code{CurrentResponse} as a
+list, with \code{location}; \code{now} (JSON \code{current}: the conditions, with
+\code{code}, \code{text} and \code{icon} for JSON \code{condition}, \code{condition_text} and
+\code{condition_icon}, \code{measured}, and the \code{station} whose \code{id} is JSON
+\code{station_id}); \code{alerts} and \code{sensors} (tibbles; a sensor's
+\code{observed_at} is JSON \code{observation_time}); \code{summary} (the place's
+forecast in words); \code{pass} (a mountain pass's forecast, chances, hours,
+travel windows and its DOT's status, cameras and road sensors; \code{NULL}
+elsewhere); \code{nowcast_hours} (a tibble shaped like a forecast's
+\verb{$series$timeseries}, or \code{NULL}); \code{as_of}, \code{alerts_as_of},
 \code{model_run_initialized_at}, \code{sensor_count}, \code{units}, \code{attribution} and
 \code{nowcast_unavailable}.
 }
@@ -69,7 +75,7 @@ alerts and the readings of nearby stations come with them.
 \examples{
 \dontshow{if (interactive() || nzchar(Sys.getenv("OUREA_BASE_URL"))) withAutoprint(\{ # examplesIf}
 now <- ew_current("or/mt-hood-meadows")
-now$current$temperature
+now$now$temperature
 now$alerts
 \dontshow{\}) # examplesIf}
 }

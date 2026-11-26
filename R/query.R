@@ -174,3 +174,84 @@ check_strings <- function(values, name) {
   }
   values
 }
+
+# `near` (`lat,lon`) and `bbox` (`west,south,east,north`) are built from
+# numbers and sent with literal commas, like a comma list (BEHAVIOR 3 and
+# 3.1 rule 5), each number by rule 6 (the shortest decimal, as given).
+# Taken as numbers, never as a pre-formatted string.
+coordinate_values <- function(value, arg, fields) {
+  if (is.list(value)) {
+    ok <- all(vapply(value, function(v) is.numeric(v) && length(v) == 1L, TRUE))
+    value <- if (ok) unlist(value) else NULL
+  }
+  if (!is.numeric(value) || length(value) != length(fields) || anyNA(value) || !all(is.finite(value))) {
+    abort_usage(c(
+      "{.arg {arg}} must be {length(fields)} finite numbers: {.field {fields}}.",
+      i = "For example {.code {arg} = c({paste(fields, collapse = ', ')})}."
+    ))
+  }
+  given <- names(value)
+  if (!is.null(given) && all(nzchar(given))) {
+    if (!setequal(given, fields)) {
+      abort_usage("{.arg {arg}} must be named {.field {fields}}, not {.field {given}}.")
+    }
+    value <- value[fields]
+  }
+  names(value) <- fields
+  value
+}
+
+check_degrees <- function(value, arg, name, bound) {
+  if (abs(value) > bound) {
+    abort_usage("{.arg {arg}}'s {.field {name}} must be between -{bound} and {bound}, not {value}.")
+  }
+}
+
+near_value <- function(near) {
+  if (is.null(near)) {
+    return(NULL)
+  }
+  value <- coordinate_values(near, "near", c("lat", "lon"))
+  check_degrees(value[["lat"]], "near", "lat", 90)
+  check_degrees(value[["lon"]], "near", "lon", 180)
+  paste(format_number(value[["lat"]]), format_number(value[["lon"]]), sep = ",")
+}
+
+bbox_value <- function(bbox) {
+  if (is.null(bbox)) {
+    return(NULL)
+  }
+  fields <- c("west", "south", "east", "north")
+  value <- coordinate_values(bbox, "bbox", fields)
+  for (name in c("west", "east")) check_degrees(value[[name]], "bbox", name, 180)
+  for (name in c("south", "north")) check_degrees(value[[name]], "bbox", name, 90)
+  if (value[["west"]] > value[["east"]]) {
+    abort_usage("{.arg bbox}'s {.field west} must not be east of its {.field east}.")
+  }
+  if (value[["south"]] > value[["north"]]) {
+    abort_usage("{.arg bbox}'s {.field south} must not be north of its {.field north}.")
+  }
+  paste(vapply(value, format_number, "", USE.NAMES = FALSE), collapse = ",")
+}
+
+# `near` with its `radius_km` (default 100, at most 1000), on search and
+# explore.
+query_add_near <- function(query, near, radius_km) {
+  if (!is.null(radius_km)) {
+    check_number(radius_km, "radius_km")
+    if (radius_km <= 0 || radius_km > 1000) {
+      abort_usage("{.arg radius_km} must be more than 0 and at most 1000.")
+    }
+  }
+  query <- query_add_raw(query, "near", near_value(near) %||% "")
+  query_add(query, "radius_km", radius_km, 100)
+}
+
+# A string option passed through as given (the server answers an unknown
+# value with a 400), or NULL.
+optional_string <- function(value, arg) {
+  if (is.null(value)) {
+    return(NULL)
+  }
+  check_nonempty(value, arg)
+}

@@ -23,9 +23,13 @@ client.}
 given.}
 }
 \value{
-A tibble with one row per alert: \code{id}, \code{event}, \code{severity},
-\code{urgency}, \code{headline}, \code{onset}, \code{expires} and \code{ends}. Its attributes
-\code{location}, \code{as_of} and \code{attribution} hold the rest of the response.
+A tibble with one row per alert (JSON \code{alerts}): \code{id}, \code{event},
+\code{severity}, \code{urgency}, \code{certainty}, \code{headline}, \code{onset}, \code{expires},
+\code{ends}, and the NWS message's \code{sent}, \code{message_type}, \code{references},
+\code{sender_name}, \code{area_desc}, \code{description}, \code{instruction}, \code{source_url},
+\code{event_key} and \code{vtec_action} when served. Its attributes \code{location},
+\code{as_of} and \code{attribution} hold the rest of the response; the count
+(JSON \code{alert_count}) is the number of rows.
 }
 \description{
 \code{ew_alerts()} lists the active alerts (watches, warnings and advisories)

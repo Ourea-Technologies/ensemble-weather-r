@@ -76,10 +76,15 @@ The answers come back in \verb{$window_totals}, in your order.}
 
 \item{models}{Include each model's own statistics (\code{model_means}).}
 
-\item{members}{Include every member's values (\code{members}), for plumes.}
+\item{members}{\code{TRUE} to include every member's values in each hour (the
+\code{members} list-column of \verb{$series$timeseries}); \code{"plume"} for the plume
+view instead: the members in columns, in \verb{$series$plume} (\code{headline},
+\code{bands}, \code{models}, and for Free and anonymous callers the pooled members
+in \code{pool}), with no hourly series. \code{members_view} names the member set
+your tier gets (\code{"full"} for Pro, \code{"pool"} for Free and anonymous).}
 
 \item{elevations}{Names of the location's elevation points to forecast too
-(for example \code{c("base", "summit")}); see \verb{$elevation_forecasts}.}
+(for example \code{c("base", "summit")}, or \code{"all"}); see \verb{$elevations}.}
 
 \item{daily}{Include daily summaries (default \code{TRUE}).}
 
@@ -114,29 +119,40 @@ given.}
 \code{NULL} uses the terrain elevation.}
 }
 \value{
-An \code{ensembleweather_forecast}: a list with
+An \code{ensembleweather_forecast}: the API's \code{ForecastResponse} as a
+list, with
 \itemize{
-\item \code{location}, \code{model_run} (with a \code{models} tibble) and \code{units};
-\item \code{hourly}: a tibble, one row per hour (\code{NULL} with \code{hourly = FALSE});
-\item \code{daily}: a tibble, one row per day (\code{NULL} with \code{daily = FALSE});
+\item \code{location} (with the forecast's \code{elevation} and the location's
+\code{elevations}), \code{model_run} (with a \code{models} tibble) and \code{units};
+\item \code{series} (JSON \code{forecast}): \code{timeseries}, a tibble with one row per
+hour (\code{NULL} with \code{hourly = FALSE}, and with \code{members = "plume"});
+\code{daily}, a tibble with one row per day (\code{NULL} with \code{daily = FALSE});
+\code{snow_outlook}, \code{precipitation_outlook}, and \code{plume} with
+\code{members = "plume"};
 \item \code{probabilities}: when you asked with \code{prob}, a tibble with the
 canonical \code{term} the server echoes (each answer is matched to your
 term by it), the reference class of each answer (\code{variable}, \code{op},
-\code{threshold}, \code{unit}, \code{window_start}, \code{window_end}, \code{aggregation},
-\code{from}, \code{to}, \code{members}) and its \code{probability}, which is \code{NA} (never 0)
-when it cannot be answered, with the reason in \code{null_reason}
-(\code{"window_not_covered"}, \code{"too_few_members"}, \code{"variable_unavailable"});
+\code{threshold}, \code{unit}, \code{window_start_hours}, \code{window_end_hours},
+\code{aggregation}, \code{from}, \code{to}, \code{members}) and its \code{value} (JSON
+\code{probability}), which is \code{NA} (never 0) when it cannot be answered,
+with the reason in \code{null_reason} (\code{"window_not_covered"},
+\code{"too_few_members"}, \code{"variable_unavailable"});
 \item \code{window_totals}: when you asked with \code{totals}, a tibble of each
-window's \code{term}, \code{aggregation} and distribution (\code{mean}, \code{p10} ...
-\code{p90}, \code{min}, \code{max}, all \code{NA} when it cannot be answered, with the
-reason in \code{null_reason});
-\item \code{snow_outlook}, \code{elevation_forecasts}, \code{nearest_sensors}, \code{point},
-\code{current}, \code{thresholds}, \code{applied}, \code{attribution} and the other fields
-of the API's \code{ForecastResponse}, when served.
+window's \code{term}, \code{start_hours} and \code{end_hours} (JSON
+\code{window_start_hours}, \code{window_end_hours}), \code{aggregation}, \code{method} and
+distribution (\code{mean}, \code{p10} ... \code{p90}, \code{min}, \code{max}, all \code{NA} when it
+cannot be answered, with the reason in \code{null_reason});
+\item \code{elevations} (JSON \code{elevation_forecasts}, each point's \code{height} is
+JSON \code{elevation}), \code{nearest_sensors}, \code{point}, \code{current}, \code{avalanche},
+\code{snow_on_ground}, \code{thresholds}, \code{applied}, \code{attribution} and the other
+fields of the API's \code{ForecastResponse}, when served.
 }
 
-\code{\link[tibble:as_tibble]{tibble::as_tibble()}} on it gives the hourly series. Use
-\code{\link[=ew_response_info]{ew_response_info()}} and \code{\link[=ew_rate_limit]{ew_rate_limit()}} for the HTTP details.
+Field names are the API's, except where BEHAVIOR.md 3.0 of the spec
+renames a field that repeats its holder's word; the wire name is given
+next to each one here and in the README. \code{\link[tibble:as_tibble]{tibble::as_tibble()}} on it
+gives the hourly series. Use \code{\link[=ew_response_info]{ew_response_info()}} and \code{\link[=ew_rate_limit]{ew_rate_limit()}}
+for the HTTP details.
 }
 \description{
 \code{ew_forecast()} gets the forecast for a named location, such as
@@ -146,7 +162,8 @@ elevation), which needs a Pro key.
 }
 \details{
 Every value is a distribution computed by the server from the full
-ensemble. The hourly series has one row per hour and, for each variable,
+ensemble. The hourly series (\verb{$series$timeseries}) has one row per hour
+and, for each variable,
 the columns \verb{<variable>_mean}, \verb{_p10}, \verb{_p25}, \verb{_p50}, \verb{_p75}, \verb{_p90} and,
 \verb{_min} and \verb{_max}. The p50 column is the median, not "the forecast".
 Wind direction is the circular distribution instead: \code{wind_direction_mean},
@@ -167,7 +184,7 @@ forecast <- ew_forecast(
   prob = ew_chance("snowfall", ">=", 6, "in"),
   totals = ew_total("snowfall", 72)
 )
-forecast$hourly[, c("valid_time", "temperature_p10", "temperature_p90")]
+forecast$series$timeseries[, c("valid_time", "temperature_p10", "temperature_p90")]
 forecast$probabilities
 forecast$window_totals
 \dontshow{\}) # examplesIf}

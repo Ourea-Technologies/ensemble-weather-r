@@ -12,7 +12,8 @@ exactly what you mean with \code{\link[=tryCatch]{tryCatch()}} or \code{\link[rl
 \itemize{
 \item \code{ensembleweather_error_authentication}: \code{INVALID_API_KEY},
 \code{UNAUTHORIZED}, or HTTP 401.
-\item \code{ensembleweather_error_permission}: \code{PRO_REQUIRED}, or HTTP 403.
+\item \code{ensembleweather_error_permission}: \code{PRO_REQUIRED}, \code{PLUS_REQUIRED}
+(a Plus or Pro route, such as \code{\link[=ew_snow_trend]{ew_snow_trend()}}), or HTTP 403.
 \item \code{ensembleweather_error_not_found}: \code{LOCATION_NOT_FOUND}, \code{NOT_FOUND},
 or HTTP 404 and 410.
 \item \code{ensembleweather_error_invalid_request}: \code{BAD_REQUEST},

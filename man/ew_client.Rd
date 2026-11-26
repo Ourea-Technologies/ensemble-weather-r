@@ -58,7 +58,7 @@ the configured base URL (a redirect to another host drops it), and never
 appears in printed output, logs or error messages.
 
 The open routes (\code{\link[=ew_search]{ew_search()}}, \code{\link[=ew_catalog_location]{ew_catalog_location()}},
-\code{\link[=ew_catalog_station]{ew_catalog_station()}} and \code{\link[=ew_attribution]{ew_attribution()}}) are sent \strong{without} the
+\code{\link[=ew_catalog_station]{ew_catalog_station()}}, \code{\link[=ew_attribution]{ew_attribution()}} and \code{\link[=ew_composition]{ew_composition()}}) are sent \strong{without} the
 key even when the client has one, so every caller shares one entry in the
 API's edge cache. Set \code{send_key_on_open_routes = TRUE} to attribute every
 request to your key instead.
