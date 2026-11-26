@@ -27,6 +27,15 @@ reference:
     contents:
       - ew_current
       - ew_alerts
+  - title: Snow
+    contents:
+      - ew_season
+      - ew_snow_trend
+      - ew_snowpack
+  - title: Rankings and maps
+    contents:
+      - ew_explore
+      - ew_alert_outlines
   - title: Finding locations
     contents:
       - ew_search
@@ -37,6 +46,7 @@ reference:
   - title: Runs and attribution
     contents:
       - ew_runs
+      - ew_composition
       - ew_attribution
   - title: Client, cache and errors
     contents:

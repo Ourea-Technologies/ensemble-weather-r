@@ -10,12 +10,12 @@ forecast <- ew_forecast(
 )
 
 cat(forecast$location$name, "\n")
-hours <- head(forecast$hourly, 24)
+hours <- head(forecast$series$timeseries, 24)
 cat(sprintf(
   "%s  %.1f to %.1f °F (p10-p90)\n",
   format(hours$valid_time, "%a %H:%M UTC"), hours$temperature_p10, hours$temperature_p90
 ), sep = "")
 
 snow <- forecast$probabilities
-chance <- if (is.na(snow$probability)) "not available" else sprintf("%.0f%%", 100 * snow$probability)
+chance <- if (is.na(snow$value)) "not available" else sprintf("%.0f%%", 100 * snow$value)
 cat(sprintf("Chance of at least 6 in of snow in the next 24 h: %s (%d members)\n", chance, snow$members))

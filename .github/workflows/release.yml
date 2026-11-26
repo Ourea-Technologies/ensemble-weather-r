@@ -1,9 +1,11 @@
 name: Release
 
 # A tag vX.Y.Z on main builds and checks the source tarball and attaches it
-# (with build provenance) to the GitHub release. CRAN submission is manual
-# (devtools::submit_cran() by the maintainer; see .github/CONTRIBUTING.md):
-# nothing here publishes to CRAN.
+# (with build provenance) to the GitHub release, behind the `release`
+# environment (its protection rules are the maintainer's). CRAN has no
+# trusted publishing or OIDC upload: submission is manual, by the maintainer
+# (see "Releasing" in .github/CONTRIBUTING.md), and nothing here publishes to
+# CRAN.
 on:
   push:
     tags: ["v*.*.*"]
@@ -54,6 +56,7 @@ jobs:
   github-release:
     needs: build
     runs-on: ubuntu-latest
+    environment: release
     permissions:
       contents: write # create the GitHub release
       id-token: write # sign the build provenance

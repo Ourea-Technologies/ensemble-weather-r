@@ -2,11 +2,11 @@
 library(ensembleweather)
 
 now <- ew_current("or/mt-hood-meadows")
-if (!is.null(now$current)) {
-  conditions <- now$current
+if (!is.null(now$now)) {
+  conditions <- now$now
   cat(sprintf(
     "%s: %s, %.1f °C (%s)\n",
-    now$location$name, conditions$condition_text, conditions$temperature, conditions$source
+    now$location$name, conditions$text, conditions$temperature, conditions$source
   ))
 }
 
