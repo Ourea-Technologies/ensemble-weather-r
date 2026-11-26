@@ -7,7 +7,7 @@
 # semantic operation and arguments onto this package's functions, and
 # `vector_value()`, which maps a result path onto the R result.
 
-expected_vector_count <- 43L
+expected_vector_count <- 58L
 
 vector_files <- function() {
   dir <- file.path(local_spec(), "vectors")
@@ -32,14 +32,23 @@ operation_functions <- c(
   listCatalogStations = "ew_catalog_stations_page",
   getCatalogStation = "ew_catalog_station",
   getAvailableRuns = "ew_runs",
-  getAttribution = "ew_attribution"
+  getAttribution = "ew_attribution",
+  explore = "ew_explore_page",
+  getComposition = "ew_composition",
+  getLocationSeason = "ew_season",
+  getLocationSnowTrend = "ew_snow_trend",
+  getLocationSnowpack = "ew_snowpack",
+  getLocationSnowpackPlume = "ew_snowpack_plume",
+  getAlertOutlines = "ew_alert_outlines",
+  getAvalancheZones = "ew_avalanche_zones"
 )
 
 # `iterate: true` uses the function that collects every page.
 collecting_functions <- c(
   ew_locations_page = "ew_locations",
   ew_catalog_locations_page = "ew_catalog_locations",
-  ew_catalog_stations_page = "ew_catalog_stations"
+  ew_catalog_stations_page = "ew_catalog_stations",
+  ew_explore_page = "ew_explore"
 )
 
 vector_window <- function(window) {
@@ -56,13 +65,24 @@ vector_call <- function(call, client) {
     fn <- collecting_functions[[fn]]
   }
   args$iterate <- NULL
+  # A named location is `location` here; on explore, `state` is a filter.
   if (!is.null(args$state) && !is.null(args$slug)) {
     args$location <- list(state = args$state, slug = args$slug)
     args$state <- NULL
     args$slug <- NULL
   }
+  # JSON arrays of strings are character vectors; `near` and `bbox` are
+  # numbers by name.
+  for (name in names(args)) {
+    value <- args[[name]]
+    if (is.list(value) && is.null(names(value)) && all(vapply(value, is.character, TRUE))) {
+      args[[name]] <- unlist(value)
+    } else if (name %in% c("near", "bbox")) {
+      args[[name]] <- unlist(value)
+    }
+  }
   if (!is.null(args$prob)) {
-    args$prob <- lapply(args$prob, function(term) {
+    args$prob <- lapply(call$args$prob, function(term) {
       ew_chance(
         term$variable, term$op, term$threshold$value, term$threshold$unit,
         window = vector_window(term$window), aggregation = term$aggregation
@@ -70,13 +90,64 @@ vector_call <- function(call, client) {
     })
   }
   if (!is.null(args$totals)) {
-    args$totals <- lapply(args$totals, function(t) ew_total(t$variable, vector_window(t$window)))
+    args$totals <- lapply(call$args$totals, function(t) ew_total(t$variable, vector_window(t$window)))
   }
   args$client <- client
   do.call(fn, args, envir = asNamespace("ensembleweather"))
 }
 
-# Rename the vector's semantic path segments to this package's names.
+# One row of a tibble as a named list: a list-column gives its element.
+tibble_row <- function(table, row) {
+  if (row > nrow(table)) {
+    return(NULL)
+  }
+  out <- lapply(table, function(column) column[[row]])
+  names(out) <- names(table)
+  out
+}
+
+# Follow one name. A tibble row's nested object is spread over
+# `<name>_<field>` columns, so a name that is not a column gathers those;
+# a window total's quantiles are its bare `mean` ... `max` columns; the
+# hourly series' `ensemble` is inlined; a list result's other response
+# fields are its attributes.
+vector_field <- function(value, name) {
+  if (is.data.frame(value)) {
+    if (name == "items") {
+      return(value)
+    }
+    if (name == "count") {
+      return(nrow(value))
+    }
+    return(attr(value, name, exact = TRUE))
+  }
+  if (!is.list(value)) {
+    return(NULL)
+  }
+  fields <- names(value)
+  if (name %in% fields) {
+    return(value[[name]])
+  }
+  prefix <- paste0(name, "_")
+  nested <- startsWith(fields %||% character(), prefix)
+  if (any(nested)) {
+    out <- value[nested]
+    names(out) <- substring(fields[nested], nchar(prefix) + 1L)
+    return(out)
+  }
+  stats <- c("mean", "p10", "p25", "p50", "p75", "p90", "min", "max")
+  if (name == "quantiles" && all(stats %in% fields)) {
+    out <- value[stats]
+    return(if (all(is.na(unlist(out)))) NULL else out)
+  }
+  if (name == "ensemble") {
+    return(value)
+  }
+  attr(value, name, exact = TRUE)
+}
+
+# A result path ("series.timeseries[0].members[0].items[0].id") over the R
+# result: `[i]` takes a tibble's row, a list's element or a vector's item.
 vector_value <- function(result, path) {
   tokens <- regmatches(path, gregexpr("[^.\\[\\]]+|\\[[0-9]+\\]", path, perl = TRUE))[[1]]
   if (tokens[[1]] == "revalidated") {
@@ -85,42 +156,21 @@ vector_value <- function(result, path) {
   if (tokens[[1]] == "rate_limit") {
     return(ew_rate_limit(result)[[tokens[[2]]]])
   }
-  # A forecast's hourly series is $hourly, one row per hour, with the
-  # ensemble's quantiles as <variable>_<stat> columns.
-  if (identical(tokens[1:2], c("forecast", "timeseries"))) {
-    row <- as.integer(gsub("\\D", "", tokens[[3]])) + 1L
-    rest <- tokens[-(1:3)]
-    if (rest[[1]] == "ensemble") rest <- rest[-1]
-    return(result$hourly[[paste(rest, collapse = "_")]][[row]])
-  }
-  # Probabilities and window totals are tibbles in the caller's order.
-  if (tokens[[1]] %in% c("probabilities", "window_totals")) {
-    table <- result[[tokens[[1]]]]
-    row <- as.integer(gsub("\\D", "", tokens[[2]])) + 1L
-    field <- paste(tokens[-(1:2)], collapse = ".")
-    renamed <- c(window_start_hours = "window_start", window_end_hours = "window_end")
-    if (field %in% names(renamed)) field <- renamed[[field]]
-    if (startsWith(field, "quantiles")) {
-      stat <- sub("^quantiles\\.?", "", field)
-      if (!nzchar(stat)) {
-        quantiles <- unlist(table[row, c("mean", "p10", "p25", "p50", "p75", "p90", "min", "max")])
-        return(if (all(is.na(quantiles))) NULL else quantiles)
-      }
-      field <- stat
-    }
-    return(table[[field]][[row]])
-  }
-  # Search returns its hits as the tibble itself.
-  if (tokens[[1]] == "count") {
-    return(nrow(result))
-  }
-  if (tokens[[1]] == "items") {
-    row <- as.integer(gsub("\\D", "", tokens[[2]])) + 1L
-    return(result[[tokens[[3]]]][[row]])
-  }
   value <- result
   for (token in tokens) {
-    value <- value[[token]]
+    if (is.null(value)) {
+      return(NULL)
+    }
+    if (startsWith(token, "[")) {
+      index <- as.integer(gsub("\\D", "", token)) + 1L
+      if (is.data.frame(value)) {
+        value <- tibble_row(value, index)
+      } else {
+        value <- if (index <= length(value)) value[[index]] else NULL
+      }
+    } else {
+      value <- vector_field(value, token)
+    }
   }
   value
 }
@@ -141,6 +191,9 @@ expect_vector_value <- function(actual, expected, label) {
     # Enumerations are strings: an unknown value keeps its raw string.
     expect_identical(actual, expected$unknown, label = label)
     expect_false(actual %in% known_location_types, label = paste(label, "is not a known value"))
+  } else if (is.character(expected) && inherits(actual, "POSIXct")) {
+    # A timestamp matches the expected string as an instant (BEHAVIOR 13).
+    expect_equal(actual, ensembleweather:::parse_timestamp(expected, label), label = label)
   } else if (is.logical(expected)) {
     expect_identical(actual, expected, label = label)
   } else if (is.numeric(expected)) {
